@@ -1,3 +1,7 @@
 from django.contrib import admin
+from main.models import Order, ExampleOrder
 
-# Register your models here.
+
+@admin.register(ExampleOrder)
+class RestaurantAdmin(admin.ModelAdmin):
+    pass
