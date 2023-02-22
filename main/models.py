@@ -98,7 +98,7 @@ class Order(models.Model):
     )
     description = models.TextField('Текст заявки')
     created_at = models.DateTimeField('Заказ создан', auto_now_add=True, db_index=True)
-    finished_at = models.DateTimeField('Заказ выполнен', blank=True, db_index=True)
+    finished_at = models.DateTimeField('Заказ выполнен', null=True, blank=True, db_index=True)
     
     class Meta:
         verbose_name = 'заказ'
