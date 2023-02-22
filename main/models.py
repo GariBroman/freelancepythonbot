@@ -68,9 +68,10 @@ class Tariff(models.Model):
 
 
 class ClientContract(models.Model):
-    client = models.OneToOneField(
+    client = models.ForeignKey(
         Person,
         verbose_name='договор',
+        related_name='client_contracts',
         on_delete=models.CASCADE
     )
     tariff = models.ForeignKey(
@@ -85,6 +86,7 @@ class ClientContract(models.Model):
     attach_contactor = models.ForeignKey(
         Person,
         verbose_name='закрепленный подрядчик',
+        related_name='contractor_contracts',
         on_delete=models.SET_NULL,
         null=True,
         blank=True
@@ -108,8 +110,8 @@ class ContractorContract(models.Model):
     order_price = models.IntegerField('Стоимость заказа', blank=True)
 
     class Meta:
-        verbose_name = 'договор клиента'
-        verbose_name_plural = 'договора клиентов'
+        verbose_name = 'договор подрядчика'
+        verbose_name_plural = 'договора подрядчиков'
 
     def __str__(self):
         return f'{self.contractor}, стоимость заявки: {self.order_price}'
