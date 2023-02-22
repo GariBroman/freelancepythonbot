@@ -2,6 +2,7 @@ from django.db import models
 from django.utils.timezone import now, timedelta
 from phonenumber_field.modelfields import PhoneNumberField
 
+
 def end_period():
     return now() + timedelta(days=30)
 
@@ -63,8 +64,12 @@ class Tariff(models.Model):
     can_see_contractor = models.BooleanField('Возможность видеть контакты подрядчика', default=False)
     can_attach_contractor = models.BooleanField('Закрепить за собой подрядчика', default=False)
 
+    class Meta:
+        verbose_name = 'тариф'
+        verbose_name_plural = 'тарифы'
+
     def __str__(self):
-        return f'{self.name} до {self.limit_orders} заявок. Отклик в течении {self.limit_time_answer} часов'
+        return f'"{self.name}" до {self.limit_orders} заявок. Отклик в течении {self.limit_time_answer} часов'
 
 
 class ClientContract(models.Model):
@@ -92,7 +97,6 @@ class ClientContract(models.Model):
         blank=True
     )
 
-
     class Meta:
         verbose_name = 'договор клиента'
         verbose_name_plural = 'договора клиентов'
@@ -119,3 +123,10 @@ class ContractorContract(models.Model):
 
 class ExampleOrder(models.Model):
     text = models.CharField('Текст заявки', max_length=200)
+
+    class Meta:
+        verbose_name = 'пример заявки'
+        verbose_name_plural = 'примеры заявок'
+
+    def __str__(self):
+        return self.text
