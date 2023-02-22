@@ -106,7 +106,7 @@ class Order(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'[{self.subscription.client}] {self.text[:50]} -> {self.contractor}'
+        return f'[{self.subscription.client}] {self.description[:50]} -> {self.contractor}'
 
 
 class OrderComments(models.Model):

@@ -39,13 +39,18 @@ VISITOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
     ]
 )
 
-CUSTOMER_INLINE_KEYBOARD = InlineKeyboardMarkup(
+CLIENT_INLINE_KEYBOARD = InlineKeyboardMarkup(
     [
         [InlineKeyboardButton(**buttons.NEW_REQUEST)],
         [InlineKeyboardButton(**buttons.NEW_CONTRACTOR)]
     ]
 )
 
+SUBSCRIPTION_KEYBOARD = InlineKeyboardMarkup(
+    [
+        [InlineKeyboardButton(**buttons.CREATE_SUBSCRIPTION)]
+    ]
+)
 NEW_CONTRUCTOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
     [
         [InlineKeyboardButton(**buttons.FILL_CONTRACTOR_FORM)],
@@ -72,6 +77,73 @@ def delete_prev_inline(func, *args, **kwargs):
     return wrapper
 
 
+def check_subscription(func, *args, **kwargs):
+    def wrapper(*args, **kwargs):
+        update, context = args[-2:]
+        if db.is_actual_subscription(telegram_id=update.effective_chat.id):
+            return func(*args, **kwargs)
+        else:
+            return subscription_alert(update=update, context=context)
+    return wrapper
+
+
+def subscription_alert(update: Update, context: CallbackContext) -> str:
+    context.bot.send_message(
+        update.effective_chat.id,
+        messages.SUBSCRIPTION_ALERT
+    )
+    return tell_about_subscription(update=update, context=context)
+
+
+def tell_about_subscription(update: Update, context: CallbackContext) -> str:
+    tariffs = db.get_tariffs()
+    message = "Давайте расскажу про наши тарифные планы:\n"
+    subscription_buttons = list()
+    for tariff in tariffs:
+        message += dedent(
+                f"""
+                {tariff.title}:
+                {tariff.orders_limit} заявок в месяц.
+                Время ответа на заявку: {tariff.answer_delay}
+                """
+        )
+        if tariff.personal_contractor_available:
+            message += dedent(
+                """
+                Возможность закрепить за собой подрядчика.
+                """
+            )
+        if tariff.contractor_contacts_availability:
+            message += dedent(
+                """
+                Возможность увидеть контакты подрядчика.
+                """
+            )
+        subscription_buttons.append(
+            [
+                InlineKeyboardButton(
+                    text=f'Оформить подписку "{tariff.title}"',
+                    callback_data=f'activate_subscription:{tariff.id}'
+                )
+            ]
+        )
+    context.bot.send_message(
+        update.effective_chat.id,
+        message,
+        reply_markup=InlineKeyboardMarkup(subscription_buttons)
+    )
+    return 'SUBSCRIPTION'
+
+
+def activate_subscription(update: Update, context: CallbackContext) -> str:
+    _, tariff_id = update.callback_query.data.split(":")
+    
+    #TODO
+
+    return 'SUBSCRIPTION'
+
+
+
 def check_access(update: Update, context: CallbackContext) -> str:
     role = db.get_role(telegram_id=update.effective_chat.id)
     if role == 'admin':
@@ -90,7 +162,7 @@ def check_access(update: Update, context: CallbackContext) -> str:
                 Добро пожаловать!
                 """
             ),
-            reply_markup=CUSTOMER_INLINE_KEYBOARD
+            reply_markup=CLIENT_INLINE_KEYBOARD
         )
         return 'CLIENT'
     
@@ -143,12 +215,13 @@ def new_client(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.WELCOME,
-        reply_markup=CUSTOMER_INLINE_KEYBOARD
+        reply_markup=CLIENT_INLINE_KEYBOARD
     )
     return 'CLIENT'
 
 
 @delete_prev_inline
+@check_subscription
 def new_request(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
@@ -226,6 +299,7 @@ def enter_phone(redis: Redis, update: Update, context: CallbackContext) -> str:
     return finish_request(redis=redis, update=update, context=context)
 
 
+@check_subscription
 def finish_request(redis: Redis, update: Update, context: CallbackContext) -> str:
     message = redis.get(f'{update.effective_chat.id}_message')
     db.create_request(telegram_id=update.effective_chat.id, message=message)
@@ -233,7 +307,7 @@ def finish_request(redis: Redis, update: Update, context: CallbackContext) -> st
     context.bot.send_message(
         update.effective_chat.id,
         messages.SUCCESS_REQUEST,
-        reply_markup=CUSTOMER_INLINE_KEYBOARD
+        reply_markup=CLIENT_INLINE_KEYBOARD
     )
     return 'CLIENT'
 
@@ -249,14 +323,10 @@ def cancel_new_request(redis: Redis, update: Update, context: CallbackContext) -
     context.bot.send_message(
         update.effective_chat.id,
         text='Возвращаемся на главную',
-        reply_markup=CUSTOMER_INLINE_KEYBOARD
+        reply_markup=CLIENT_INLINE_KEYBOARD
     )
     return 'CLIENT'
 
-
-@delete_prev_inline
-def show_requests(update: Update, context: CallbackContext) -> str:
-    pass
 
 
 class Command(BaseCommand):
@@ -281,6 +351,9 @@ class Command(BaseCommand):
                         CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
                         CallbackQueryHandler(cancel_new_contractor, pattern=buttons.CANCEL_NEW_CONTRACTOR['callback_data']),
                         CallbackQueryHandler(contractor_salary, pattern=buttons.CONTRACTOR_SALARY['callback_data'])
+                    ],
+                    'SUBSCRIPTION': [
+                        CallbackQueryHandler(activate_subscription, pattern='activate_subscription'),
                     ],
                     'NEW_CONTRACTOR_FORM': [
 

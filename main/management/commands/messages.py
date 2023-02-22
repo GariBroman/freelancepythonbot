@@ -2,6 +2,8 @@ from textwrap import dedent
 
 # Просьба сохранять алфавитный порядок
 
+
+
 ASK_PHONENUMBER = dedent(
     """
     Осталась небольшая формальность.
@@ -48,6 +50,12 @@ PHONE_INSTEAD_REQUEST = dedent(
 )
 
 PHONE_SAVED = 'Номер сохранен'
+
+SUBSCRIPTION_ALERT = dedent(
+    """
+    Для использования сервиса вам необходимо приобрести подписку
+    """
+)
 
 SUCCESS_REQUEST = dedent(
     f'''

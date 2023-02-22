@@ -6,6 +6,8 @@ CANCEL = {'text': "Я передумал", 'callback_data': 'cancel'}
 
 CONTRACTOR_SALARY = {'text': 'Сколько я буду зарабатывать', 'callback_data': 'contractor_salary'}
 
+CREATE_SUBSCRIPTION = {'text': 'Оформить подписку', 'callback_data': 'create_subscription'}
+
 FILL_CONTRACTOR_FORM = {'text': 'Заполнить анкету', 'callback_data': 'fill_contractor_form'}
 
 NEW_CONTRACTOR = {'text': 'Я сам техподдержка', 'callback_data': 'new_contractor'}
