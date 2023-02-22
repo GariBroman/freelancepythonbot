@@ -1,7 +1,12 @@
 from django.contrib import admin
-from main.models import Order, ExampleOrder
+from main.models import Order, ExampleOrder, Tariff
 
 
 @admin.register(ExampleOrder)
-class RestaurantAdmin(admin.ModelAdmin):
+class ExampleOrderAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Tariff)
+class TariffAdmin(admin.ModelAdmin):
     pass
