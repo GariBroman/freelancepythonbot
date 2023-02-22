@@ -28,34 +28,35 @@ from telegram.ext import (
 )
 
 import main.management.commands.db_processing as db
-
+import main.management.commands.messages as messages
+import main.management.commands.buttons as buttons
 
 VISITOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton(text='Мне нужна техподдержка', callback_data='new_customer')],
-        [InlineKeyboardButton(text='Я сам техподдержка', callback_data='new_contractor')]
+        [InlineKeyboardButton(**buttons.NEW_CUSTOMER)],
+        [InlineKeyboardButton(**buttons.NEW_CONTRACTOR)]
 
     ]
 )
 CUSTOMER_INLINE_KEYBOARD = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton(text='Отправить заявку', callback_data='new_request')],
-        [InlineKeyboardButton(text='Хочу стать исполнителем', callback_data='new_contractor')]
+        [InlineKeyboardButton(**buttons.NEW_REQUEST)],
+        [InlineKeyboardButton(**buttons.NEW_CONTRACTOR)]
     ]
 )
 
 
 NEW_CONTRUCTOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton(text='Заполнить анкету', callback_data='fill_contractor_form')],
-        [InlineKeyboardButton(text='Сколько я буду зарабатывать', callback_data='contractor_salary')],
-        [InlineKeyboardButton(text='Я передумал', callback_data='cancel_new_contractor')]
+        [InlineKeyboardButton(**buttons.FILL_CONTRACTOR_FORM)],
+        [InlineKeyboardButton(**buttons.CONTRACTOR_SALARY)],
+        [InlineKeyboardButton(**buttons.CANCEL_NEW_CONTRACTOR)]
     ]
 )
 
 CANCEL_INLINE = InlineKeyboardMarkup(
     [[
-        InlineKeyboardButton(text="Я передумал", callback_data='cancel_new_request')
+        InlineKeyboardButton(**buttons.CANCEL_NEW_REQUEST)
     ]]
 )
 
@@ -96,12 +97,7 @@ def check_access(update: Update, context: CallbackContext) -> str:
     # make smth with new user
     context.bot.send_message(
         update.effective_chat.id,
-        text=dedent(
-            """
-            Здравствуйте!
-            Я первая линия поддержки пользователей.
-            """
-        ),
+        text=messages.HELLO_VISITOR,
         reply_markup=VISITOR_INLINE_KEYBOARD
     )
     return 'VISITOR'
@@ -113,12 +109,7 @@ def check_access(update: Update, context: CallbackContext) -> str:
 def new_contractor(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
-        text=dedent(
-            """
-            Для того, чтобы стать исполнителем, вам необходимо заполнить анкету.
-            С вами свяжется наш менеджер, проведет собеседование и расскажет детали.
-            """
-        ),
+        text=messages.NEW_CONTRACTOR,
         reply_markup=NEW_CONTRUCTOR_INLINE_KEYBOARD
     )
     return 'VISITOR'
@@ -128,7 +119,7 @@ def new_contractor(update: Update, context: CallbackContext) -> str:
 def contractor_salary(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
-        text='Вы будете зарабатывать МНОГО ДЕНЕГ!!! 💰💰💰',
+        text=messages.NEW_CONTRACTOR_SALARY,
         reply_markup=NEW_CONTRUCTOR_INLINE_KEYBOARD
     )
     return 'VISITOR'
@@ -139,7 +130,7 @@ def cancel_new_contractor(update: Update, context: CallbackContext) -> str:
     role = db.get_role(telegram_id=update.effective_chat.id)
     context.bot.send_message(
         update.effective_chat.id,
-        text='Как скажете',
+        text=messages.OK,
         reply_markup=VISITOR_INLINE_KEYBOARD
     )
     if role:
@@ -153,11 +144,7 @@ def new_client(update: Update, context: CallbackContext) -> str:
     db.create_client(telegram_id=update.effective_chat.id, username=username)
     context.bot.send_message(
         update.effective_chat.id,
-        text=dedent(
-            """
-            Добро пожаловать!
-            """
-        ),
+        text=messages.WELCOME,
         reply_markup=CUSTOMER_INLINE_KEYBOARD
     )
     return 'CLIENT'
@@ -167,13 +154,7 @@ def new_client(update: Update, context: CallbackContext) -> str:
 def new_request(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
-        text=dedent(
-            """
-            Опишите тезисно вашу проблему.
-
-            ! У вас есть на это 1000 символов с учетом пробелов и спец. символов.
-            """
-        ),
+        text=messages.DESCRIBE_REQUEST,
         reply_markup=CANCEL_INLINE
     )
     return 'CLIENT'
@@ -183,13 +164,7 @@ def client_message(redis: Redis, update: Update, context: CallbackContext) -> st
     if len(update.message.text) > 1000:
         context.bot.send_message(
             update.effective_chat.id,
-            text=dedent(
-                """
-                Превышен лимит символов.
-
-                ! У вас есть на это 1000 символов с учетом пробелов и спец. символов.
-                """
-            ),
+            text=messages.TOO_MUCH_REQUEST_SYMBOLS,
             reply_markup=CANCEL_INLINE
         )
         return 'CLIENT'
@@ -202,16 +177,7 @@ def client_message(redis: Redis, update: Update, context: CallbackContext) -> st
     if not db.is_client_phone(telegram_id=update.effective_chat.id): 
         context.bot.send_message(
             update.effective_chat.id,
-            text=dedent(
-                """
-                Осталась небольшая формальность.
-
-                Нам нужен номер вашего телефона, чтобы мы смогли связаться с вами.
-
-                Можете ввести его в международном формате или просто нажать кнопку "Поделиться номером".
-
-                """
-            ),
+            text=messages.ASK_PHONENUMBER,
             reply_markup=ReplyKeyboardMarkup(
                 [
                     [KeyboardButton(text='Поделиться номером', request_contact=True)]
@@ -233,13 +199,7 @@ def enter_phone(redis: Redis, update: Update, context: CallbackContext) -> str:
     if not message:
         context.bot.send_message(
             update.effective_chat.id,
-            dedent(
-                f'''
-                Мне показалось или вы отправили номер телефона вместо сообщения?
-
-                Не торопитесь, опишите сначала проблему.
-                '''
-            ),
+            messages.PHONE_INSTEAD_REQUEST,
         )
         return 'CLIENT'
     if not update.message.contact:
@@ -251,13 +211,7 @@ def enter_phone(redis: Redis, update: Update, context: CallbackContext) -> str:
         except ValidationError:
             context.bot.send_message(
                 update.effective_chat.id,
-                dedent(
-                    f'''
-                    Похожу что вы с ошибкой отправили номер телефона.
-                    Не могу распознать номер "{phonenumber}".
-                    Попробуйте еще раз или просто воспользуйтесь кнопкой.
-                    '''
-                ),
+                messages.invalid_number(phonenumber=phonenumber),
             )
             return 'CLIENT'
     else:
@@ -267,7 +221,7 @@ def enter_phone(redis: Redis, update: Update, context: CallbackContext) -> str:
     db.update_client_phone(telegram_id=update.effective_chat.id, phonenumber=phonenumber)
     context.bot.send_message(
             update.effective_chat.id,
-            'Номер сохранен',
+            message.PHONE_SAVED,
             reply_markup=ReplyKeyboardRemove()
         )
     return finish_request(redis=redis, update=update, context=context)
@@ -279,12 +233,7 @@ def finish_request(redis: Redis, update: Update, context: CallbackContext) -> st
     redis.delete(f'{update.effective_chat.id}_message')
     context.bot.send_message(
         update.effective_chat.id,
-        dedent(
-            f'''
-            Заявка отправлена!
-            Ожидайте звонка менеджера!
-            '''
-        ),
+        messages.SUCCESS_REQUEST,
         reply_markup=CUSTOMER_INLINE_KEYBOARD
     )
     return 'CLIENT'
@@ -324,10 +273,10 @@ class Command(BaseCommand):
                 ],
                 states = {
                     'VISITOR': [
-                        CallbackQueryHandler(new_client, pattern='new_customer'),
-                        CallbackQueryHandler(new_contractor, pattern='new_contractor'),
-                        CallbackQueryHandler(cancel_new_contractor, pattern='cancel_new_contractor'),
-                        CallbackQueryHandler(contractor_salary, pattern='contractor_salary')
+                        CallbackQueryHandler(new_client, pattern=buttons.NEW_CLIENT['callback_data']),
+                        CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
+                        CallbackQueryHandler(cancel_new_contractor, pattern=buttons.CANCEL_NEW_CONTRACTOR['callback_data']),
+                        CallbackQueryHandler(contractor_salary, pattern=buttons.CONTRACTOR_SALARY['callback_data'])
                     ],
                     'NEW_CONTRACTOR_FORM': [
 
@@ -336,8 +285,8 @@ class Command(BaseCommand):
                         MessageHandler(filters=Filters.regex(r'^\+?\d{7,15}$'), callback=partial(enter_phone, redis)),
                         MessageHandler(filters=Filters.contact, callback=partial(enter_phone, redis)),
                         MessageHandler(filters=Filters.text, callback=partial(client_message, redis)),
-                        CallbackQueryHandler(new_request, pattern='new_request'),
-                        CallbackQueryHandler(partial(cancel_new_request, redis), pattern='cancel_new_request'),
+                        CallbackQueryHandler(new_request, pattern=buttons.NEW_REQUEST['callback_data']),
+                        CallbackQueryHandler(partial(cancel_new_request, redis), pattern=buttons.CANCEL_NEW_REQUEST['callback_data']),
                     ],
                     'CONTRACTOR': [
 

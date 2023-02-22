@@ -14,6 +14,7 @@ def get_client(telegram_id: str): #Добавить аннотацию моде�
 
 
 def is_client_phone(telegram_id: str) -> bool:
+    # check if client.phone is not Null
     return False # return correct value
 
 def update_client_phone(telegram_id: str,
