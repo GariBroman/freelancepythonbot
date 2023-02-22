@@ -27,13 +27,13 @@ class Customer(models.Model):
 class Order(models.Model):
     client = models.ForeignKey(
         Customer,
-        related_name='orders',
+        related_name='client_orders',
         verbose_name='клиент',
         on_delete=models.PROTECT
     )
     contractor = models.ForeignKey(
         Customer,
-        related_name='orders',
+        related_name='contractor_orders',
         verbose_name='подрядчик',
         on_delete=models.PROTECT,
         null=True,
@@ -49,7 +49,7 @@ class Order(models.Model):
     class Meta:
         verbose_name = 'заказ'
         verbose_name_plural = 'заказы'
-        ordering=['-created_at']
+        ordering = ['-created_at']
 
     def __str__(self):
         return f'{self.client} {self.text} -> {self.contractor}'
@@ -75,7 +75,8 @@ class ClientContract(models.Model):
     tariff = models.ForeignKey(
         Tariff,
         verbose_name='тариф',
-        on_delete=models.SET_NULL
+        on_delete=models.SET_NULL,
+        null=True
     )
     orders_limit_to = models.DateTimeField('конец периода', default=end_period)
     orders_left = models.IntegerField('остаток заявок')
@@ -89,7 +90,7 @@ class ClientContract(models.Model):
         return f'{self.client}, {self.tariff} Остаток заявок: {self.orders_left}'
 
 
-class ContractorContract(models):
+class ContractorContract(models.Model):
     contractor = models.ForeignKey(
         Customer,
         verbose_name='договор подрядчика',
@@ -107,4 +108,3 @@ class ContractorContract(models):
 
 class ExampleOrder(models.Model):
     text = models.CharField('Текст заявки', max_length=200)
-
