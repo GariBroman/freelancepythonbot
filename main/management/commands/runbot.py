@@ -60,13 +60,14 @@ CANCEL_INLINE = InlineKeyboardMarkup(
 )
 
 
-def delete_prev_inline(func, **kwargs):
-    def wrapper(update: Update, context: CallbackContext, **kwargs):
+def delete_prev_inline(func, *args, **kwargs):
+    def wrapper(*args, **kwargs):
+        update, context = args[-2:]
         context.bot.edit_message_reply_markup(
             chat_id=update.effective_chat.id,
             message_id=update.callback_query.message.message_id,
         )
-        return func(update, context, **kwargs)
+        return func(*args, **kwargs)
     return wrapper
 
 
@@ -193,6 +194,9 @@ def client_message(redis: Redis, update: Update, context: CallbackContext) -> st
         )
         return 'CLIENT'
 
+    if redis.get(f'{update.effective_chat.id}_message'):
+        return enter_phone(redis=redis, update=update, context=context)
+
     redis.set(f'{update.effective_chat.id}_message', update.message.text)
     
     if not db.is_client_phone(telegram_id=update.effective_chat.id): 
@@ -285,12 +289,13 @@ def finish_request(redis: Redis, update: Update, context: CallbackContext) -> st
     )
     return 'CLIENT'
 
+@delete_prev_inline
 def cancel_new_request(redis: Redis, update: Update, context: CallbackContext) -> str:
     redis.delete(f'{update.effective_chat.id}_message')
     context.bot.send_message(
         update.effective_chat.id,
         text='Как скажете',
-        reply_markup=ReplyKeyboardRemove
+        reply_markup=ReplyKeyboardRemove()
     )
     context.bot.send_message(
         update.effective_chat.id,
@@ -328,7 +333,7 @@ class Command(BaseCommand):
 
                     ],
                     'CLIENT': [
-                        MessageHandler(filters=Filters.regex(r'^\+\d{7,15}$'), callback=partial(enter_phone, redis)),
+                        MessageHandler(filters=Filters.regex(r'^\+?\d{7,15}$'), callback=partial(enter_phone, redis)),
                         MessageHandler(filters=Filters.contact, callback=partial(enter_phone, redis)),
                         MessageHandler(filters=Filters.text, callback=partial(client_message, redis)),
                         CallbackQueryHandler(new_request, pattern='new_request'),
