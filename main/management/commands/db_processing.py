@@ -1,4 +1,5 @@
 from main import models as main_models
+from django.db.models import QuerySet
 
 def get_role(telegram_id):
     return # 'client', 'contractor' or 'admin' 
@@ -27,6 +28,7 @@ def create_request(telegram_id: str,
                    message: str):
     return
 
-def get_active_requests(telegram_id: str):
+def get_active_requests(telegram_id: str) -> QuerySet:
+    #TODO Order.objects.exclude(declined=True)
     pass
 
