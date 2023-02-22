@@ -33,7 +33,7 @@ import main.management.commands.buttons as buttons
 
 VISITOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton(**buttons.NEW_CUSTOMER)],
+        [InlineKeyboardButton(**buttons.NEW_CLIENT)],
         [InlineKeyboardButton(**buttons.NEW_CONTRACTOR)]
 
     ]
