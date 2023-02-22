@@ -38,13 +38,13 @@ VISITOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
 
     ]
 )
+
 CUSTOMER_INLINE_KEYBOARD = InlineKeyboardMarkup(
     [
         [InlineKeyboardButton(**buttons.NEW_REQUEST)],
         [InlineKeyboardButton(**buttons.NEW_CONTRACTOR)]
     ]
 )
-
 
 NEW_CONTRUCTOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
     [
@@ -56,7 +56,7 @@ NEW_CONTRUCTOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
 
 CANCEL_INLINE = InlineKeyboardMarkup(
     [[
-        InlineKeyboardButton(**buttons.CANCEL_NEW_REQUEST)
+        InlineKeyboardButton(**buttons.CANCEL)
     ]]
 )
 
@@ -101,8 +101,6 @@ def check_access(update: Update, context: CallbackContext) -> str:
         reply_markup=VISITOR_INLINE_KEYBOARD
     )
     return 'VISITOR'
-
-
 
 
 @delete_prev_inline
@@ -194,6 +192,7 @@ def client_message(redis: Redis, update: Update, context: CallbackContext) -> st
         return 'CLIENT'
     return finish_request(redis=redis, update=update, context=context)
 
+
 def enter_phone(redis: Redis, update: Update, context: CallbackContext) -> str:
     message = redis.get(f'{update.effective_chat.id}_message')
     if not message:
@@ -221,7 +220,7 @@ def enter_phone(redis: Redis, update: Update, context: CallbackContext) -> str:
     db.update_client_phone(telegram_id=update.effective_chat.id, phonenumber=phonenumber)
     context.bot.send_message(
             update.effective_chat.id,
-            message.PHONE_SAVED,
+            messages.PHONE_SAVED,
             reply_markup=ReplyKeyboardRemove()
         )
     return finish_request(redis=redis, update=update, context=context)
@@ -238,6 +237,7 @@ def finish_request(redis: Redis, update: Update, context: CallbackContext) -> st
     )
     return 'CLIENT'
 
+
 @delete_prev_inline
 def cancel_new_request(redis: Redis, update: Update, context: CallbackContext) -> str:
     redis.delete(f'{update.effective_chat.id}_message')
@@ -253,6 +253,10 @@ def cancel_new_request(redis: Redis, update: Update, context: CallbackContext) -
     )
     return 'CLIENT'
 
+
+@delete_prev_inline
+def show_requests(update: Update, context: CallbackContext) -> str:
+    pass
 
 
 class Command(BaseCommand):
@@ -286,7 +290,7 @@ class Command(BaseCommand):
                         MessageHandler(filters=Filters.contact, callback=partial(enter_phone, redis)),
                         MessageHandler(filters=Filters.text, callback=partial(client_message, redis)),
                         CallbackQueryHandler(new_request, pattern=buttons.NEW_REQUEST['callback_data']),
-                        CallbackQueryHandler(partial(cancel_new_request, redis), pattern=buttons.CANCEL_NEW_REQUEST['callback_data']),
+                        CallbackQueryHandler(partial(cancel_new_request, redis), pattern=buttons.CANCEL['callback_data']),
                     ],
                     'CONTRACTOR': [
 

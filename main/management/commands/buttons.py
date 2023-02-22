@@ -2,7 +2,7 @@
 
 CANCEL_NEW_CONTRACTOR = {'text': 'Я передумал', 'callback_data': 'cancel_new_contractor'}
 
-CANCEL_NEW_REQUEST = {'text': "Я передумал", 'callback_data': 'cancel_new_request'}
+CANCEL = {'text': "Я передумал", 'callback_data': 'cancel'}
 
 CONTRACTOR_SALARY = {'text': 'Сколько я буду зарабатывать', 'callback_data': 'contractor_salary'}
 

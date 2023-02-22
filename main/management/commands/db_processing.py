@@ -1,4 +1,4 @@
-
+from main import models as main_models
 
 def get_role(telegram_id):
     return # 'client', 'contractor' or 'admin' 
@@ -26,3 +26,7 @@ def update_client_phone(telegram_id: str,
 def create_request(telegram_id: str,
                    message: str):
     return
+
+def get_active_requests(telegram_id: str):
+    pass
+
