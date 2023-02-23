@@ -10,3 +10,8 @@ class ExampleOrderAdmin(admin.ModelAdmin):
 @admin.register(Tariff)
 class TariffAdmin(admin.ModelAdmin):
     pass
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    pass

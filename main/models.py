@@ -41,6 +41,7 @@ class Tariff(models.Model):
     def __str__(self):
         return self.title
 
+
 class ClientSubscription(models.Model):
     client = models.ForeignKey(
         'Person',
@@ -96,6 +97,7 @@ class Order(models.Model):
         null=True,
         blank=True
     )
+    price = models.IntegerField('Стоимость работ', default=500)
     description = models.TextField('Текст заявки')
     created_at = models.DateTimeField('Заказ создан', auto_now_add=True, db_index=True)
     finished_at = models.DateTimeField('Заказ выполнен', null=True, blank=True, db_index=True)
@@ -127,6 +129,7 @@ class OrderComments(models.Model):
     
     def __str__(self):
         return f'{self.comment[:100]}...'
+
 
 class ExampleOrder(models.Model):
     text = models.CharField('Текст заявки', max_length=200)
