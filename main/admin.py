@@ -1,7 +1,16 @@
 from django.contrib import admin
+from django import forms
 from main.models import (
-    Order, ExampleOrder, Tariff, ClientSubscription, OrderComments,
-    Client, Contractor, Owner, Manager, Person
+    Order, 
+    ExampleOrder, 
+    Tariff, 
+    ClientSubscription, 
+    OrderComments,
+    Client, 
+    Contractor, 
+    Owner, 
+    Manager, 
+    Person
 )
 
 
@@ -16,9 +25,31 @@ class ClientSubscriptionInline(admin.TabularInline):
     extra = 0
 
 
+class OrderClientInline(admin.TabularInline):
+    fk_name = 'client'
+    fields = ('contractor', 'description')
+    model = Order
+    extra = 0
+
+
+class OrderContractorInline(admin.TabularInline):
+    fk_name = 'contractor'
+    fields = ('client', 'description')
+    model = Order
+    extra = 0
+
+
+class ExampleOrderModelForm(forms.ModelForm):
+    text = forms.CharField(widget=forms.Textarea)
+
+    class Meta:
+        model = ExampleOrder
+        fields = '__all__'
+
+
 @admin.register(ExampleOrder)
 class ExampleOrderAdmin(admin.ModelAdmin):
-    pass
+    form = ExampleOrderModelForm
 
 
 @admin.register(Tariff)
@@ -42,7 +73,8 @@ class PersonAdmin(admin.ModelAdmin):
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
     inlines = [
-        ClientSubscriptionInline
+        ClientSubscriptionInline,
+        OrderClientInline
     ]
 
 
@@ -58,7 +90,9 @@ class ManagerAdmin(admin.ModelAdmin):
 
 @admin.register(Contractor)
 class ContractorAdmin(admin.ModelAdmin):
-    pass
+    inlines = [
+        OrderContractorInline
+    ]
 
 
 @admin.register(ClientSubscription)
