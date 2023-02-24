@@ -104,8 +104,8 @@ class Order(models.Model):
         null=True,
         blank=True
     )
-    price = models.DecimalField(
-        'стоимость',
+    salary = models.DecimalField(
+        'стоимость работ',
         max_digits=8,
         decimal_places=2,
         default=300,
