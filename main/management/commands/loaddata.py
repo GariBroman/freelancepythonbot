@@ -8,21 +8,21 @@ TARIFF_ITEMS = [
         'title': 'Эконом',
         'orders_limit': 5,
         'answer_delay': timedelta(hours=24),
-        'subscription_price': 4000,
+        'price': 4000,
     },
     {
         'title': 'Стандарт',
         'orders_limit': 15,
         'answer_delay': timedelta(hours=1),
         'personal_contractor_available': True,
-        'subscription_price': 9000,
+        'price': 9000,
     },
     {
         'title': 'VIP',
         'orders_limit': 60,
         'answer_delay': timedelta(hours=1),
         'contractor_contacts_availability': True,
-        'subscription_price': 40000,
+        'price': 25000,
     },
 ]
 

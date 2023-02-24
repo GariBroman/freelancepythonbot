@@ -7,7 +7,15 @@ from django.http.response import Http404
 def get_role(telegram_id):
     try:
         person = get_object_or_404(main_models.Person, telegram_id=telegram_id)
-        return person.role
+        if person.clients.all():
+            return 'client'
+        elif person.contractors.all():
+            return 'contractor'
+        elif person.owners.all():
+            return 'owners'
+        elif person.managers.all():
+            return 'manager'
+
     except Http404:
         return 'visitor'
 
@@ -16,13 +24,14 @@ def create_client(telegram_id: str,
                   username: str,
                   role: str = 'client') -> None:
 
-    main_models.Person.objects.update_or_create(
-        telegram_id=telegram_id, name=username, role=role, defaults={'telegram_id': telegram_id}
+    person, _ = main_models.Person.objects.update_or_create(
+        telegram_id=telegram_id, name=username, defaults={'telegram_id': telegram_id}
     )
+    main_models.Client.objects.create(person=person)
 
 
 def get_client(telegram_id: str):
-    return main_models.Person.objects.get(telegram_id=telegram_id)
+    return main_models.Client.objects.get(person__telegram_id=telegram_id)
 
 
 def is_actual_subscription(telegram_id: str) -> bool:
@@ -38,6 +47,7 @@ def is_client_phone(telegram_id: str) -> bool:  ## TODO !!!Может обозв
     #
     # return True if person.phone else False
     pass
+
 
 def update_client_phone(telegram_id: str,
                         phonenumber: str) -> None:

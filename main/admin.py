@@ -1,6 +1,7 @@
 from django.contrib import admin
 from main.models import (
-    Order, ExampleOrder, Tariff, ClientSubscription, OrderComments, Person
+    Order, ExampleOrder, Tariff, ClientSubscription, OrderComments,
+    Client, Contractor, Owner, Manager, Person
 )
 
 
@@ -35,9 +36,29 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(Person)
 class PersonAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Client)
+class ClientAdmin(admin.ModelAdmin):
     inlines = [
         ClientSubscriptionInline
     ]
+
+
+@admin.register(Owner)
+class OwnerAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Manager)
+class ManagerAdmin(admin.ModelAdmin):
+    pass
+
+
+@admin.register(Contractor)
+class ContractorAdmin(admin.ModelAdmin):
+    pass
 
 
 @admin.register(ClientSubscription)
