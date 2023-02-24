@@ -179,7 +179,8 @@ class Order(models.Model):  # TODO проверить почему нет Client
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'[{self.client.person.name}] {self.description[:50]} -> {self.contractor.person.name}'
+        contractor = self.contractor.person.name if self.contractor else ''
+        return f"[{self.client.person.name}] {self.description[:50]} -> {contractor}"
 
 
 class OrderComments(models.Model):
