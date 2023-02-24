@@ -137,7 +137,7 @@ class ClientSubscription(models.Model):
         return f'{self.client}, {self.tariff} Остаток заявок: {self.orders_left()}'
 
     def orders_left(self):
-        return self.tariff.orders_limit - len(self.orders.all())
+        return self.tariff.orders_limit - len(self.client.orders.all())
 
     def expired_at(self):
         return self.started_at + self.tariff.validity
