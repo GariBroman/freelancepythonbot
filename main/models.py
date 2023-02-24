@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.timezone import now, timedelta
 from phonenumber_field.modelfields import PhoneNumberField
+from django.core.validators import MinValueValidator
 
 
 class Person(models.Model):
@@ -29,6 +30,12 @@ class Person(models.Model):
 class Tariff(models.Model):
     title = models.CharField('Название тарифа', max_length=20)
     orders_limit = models.IntegerField('Лимит заявок в месяц')
+    subscription_price = models.DecimalField(
+        'стоимость подписки',
+        max_digits=8,
+        decimal_places=2,
+        validators=[MinValueValidator(0)]
+    )
     validity = models.DurationField('Срок действия', default=timedelta(days=30))
     answer_delay = models.DurationField('Время ответа на заявку')
     contractor_contacts_availability = models.BooleanField('Возможность видеть контакты подрядчика', default=False)
@@ -97,9 +104,16 @@ class Order(models.Model):
         null=True,
         blank=True
     )
-    price = models.IntegerField('Стоимость работ', default=500)
+    price = models.DecimalField(
+        'стоимость',
+        max_digits=8,
+        decimal_places=2,
+        default=300,
+        validators=[MinValueValidator(0)]
+    )
     description = models.TextField('Текст заявки')
     created_at = models.DateTimeField('Заказ создан', auto_now_add=True, db_index=True)
+    take_at = models.DateTimeField('Взят в работу', null=True, blank=True, db_index=True)
     finished_at = models.DateTimeField('Заказ выполнен', null=True, blank=True, db_index=True)
     
     class Meta:
