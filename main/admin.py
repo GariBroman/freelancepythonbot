@@ -1,5 +1,18 @@
 from django.contrib import admin
-from main.models import Order, ExampleOrder, Tariff, ClientSubscription, OrderComments, Person
+from main.models import (
+    Order, ExampleOrder, Tariff, ClientSubscription, OrderComments, Person
+)
+
+
+class OrderCommentsInline(admin.TabularInline):
+    model = OrderComments
+    extra = 0
+
+
+class ClientSubscriptionInline(admin.TabularInline):
+    fk_name = 'client'
+    model = ClientSubscription
+    extra = 0
 
 
 @admin.register(ExampleOrder)
@@ -14,12 +27,17 @@ class TariffAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    pass
+    readonly_fields = ('created_at', )
+    inlines = [
+        OrderCommentsInline
+    ]
 
 
 @admin.register(Person)
 class PersonAdmin(admin.ModelAdmin):
-    pass
+    inlines = [
+        ClientSubscriptionInline
+    ]
 
 
 @admin.register(ClientSubscription)

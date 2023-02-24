@@ -89,7 +89,7 @@ class ClientSubscription(models.Model):
         return now() <= self.started_at + self.tariff.validity
 
 
-class Order(models.Model):
+class Order(models.Model): ## TODO проверить почему нет Client в заказе
     subscription = models.ForeignKey(
         'ClientSubscription',
         related_name='orders',
