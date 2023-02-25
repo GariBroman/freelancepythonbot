@@ -1,3 +1,4 @@
+
 from django.db import models
 from django.utils.timezone import now, timedelta
 from phonenumber_field.modelfields import PhoneNumberField
@@ -104,6 +105,30 @@ class Tariff(models.Model):
 
     def __str__(self):
         return self.title
+
+    def payment_description(self):
+        description = f'Тариф: {self.title}\nЛимит заявок в месяц: {self.orders_limit}\n'
+        description += f'Стоимость подписки: {self.price}\n'
+
+        return description
+
+    def display_answer_delay(self) -> str:
+        total_seconds = self.answer_delay.total_seconds()
+
+        days = total_seconds // 86400
+        remaining_hours = total_seconds % 86400
+        remaining_minutes = remaining_hours % 3600
+        hours = remaining_hours // 3600
+        minutes = remaining_minutes // 60
+        seconds = remaining_minutes % 60
+
+        days_str = f'{days} дн. ' if days else ''
+        hours_str = f'{hours} ч. ' if hours else ''
+        minutes_str = f'{minutes}мин ' if minutes else ''
+        seconds_str = f'{seconds}сек ' if seconds and not hours_str else ''
+
+        return f'{days_str}{hours_str}{minutes_str}{seconds_str}'
+
 
 
 class ClientSubscription(models.Model):

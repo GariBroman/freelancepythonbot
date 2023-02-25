@@ -63,3 +63,7 @@ def create_request(telegram_id: str,
 
 def get_tariffs() -> QuerySet:
     return main_models.Tariff.objects.all()
+
+
+def get_tariff(tariff_id: str):
+    return main_models.Tariff.objects.get(id=int(tariff_id))
