@@ -2,19 +2,23 @@ from main import models as main_models
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 from django.http.response import Http404
-
+from contextlib import suppress
 
 def get_role(telegram_id):
     try:
         person = get_object_or_404(main_models.Person, telegram_id=telegram_id)
-        if person.clients.all():
-            return 'client'
-        elif person.contractors.all():
-            return 'contractor'
-        elif person.owners.all():
-            return 'owner'
-        elif person.managers.all():
-            return 'manager'
+        with suppress((main_models.Person.clients.RelatedObjectDoesNotExist,
+                       main_models.Person.contractors.RelatedObjectDoesNotExist,
+                       main_models.Person.owners.RelatedObjectDoesNotExist,
+                       main_models.Person.managers.RelatedObjectDoesNotExist)):
+            if person.clients.all():
+                return 'client'
+            elif person.contractors.all():
+                return 'contractor'
+            elif person.owners.all():
+                return 'owner'
+            elif person.managers.all():
+                return 'manager'
 
     except Http404:
         return 'visitor'
@@ -28,6 +32,9 @@ def create_person(telegram_id: int,
         telegram_id=telegram_id, defaults={'name': username, 'phone': phonenumber}
     )
 
+def create_client(telegram_id: str) -> None:
+    person = main_models.Person.objects.get(telegram_id=telegram_id)
+    main_models.Client.objects.get_or_create(person=person)
 
 def get_client(telegram_id: str):
     return main_models.Client.objects.get(person__telegram_id=telegram_id)
