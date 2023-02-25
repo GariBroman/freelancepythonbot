@@ -59,8 +59,6 @@ SUBSCRIPTION_KEYBOARD = InlineKeyboardMarkup(
 )
 NEW_CONTRUCTOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton(**buttons.FILL_CONTRACTOR_FORM)],
-        [InlineKeyboardButton(**buttons.CONTRACTOR_SALARY)],
         [InlineKeyboardButton(**buttons.CANCEL_NEW_CONTRACTOR)]
     ]
 )
@@ -87,11 +85,15 @@ def check_access(update: Update, context: CallbackContext) -> str:
 
 def delete_prev_inline(func, *args, **kwargs):
     def wrapper(*args, **kwargs):
-        update, context = args[-2:]
-        context.bot.edit_message_reply_markup(
-            chat_id=update.effective_chat.id,
-            message_id=update.callback_query.message.message_id,
-        )
+        try:
+            update, context = args[-2:]
+        except ValueError:
+            update, context = kwargs['update'], kwargs['context']
+        if update.callback_query:
+            context.bot.edit_message_reply_markup(
+                chat_id=update.effective_chat.id,
+                message_id=update.callback_query.message.message_id,
+            )
         return func(*args, **kwargs)
     return wrapper
 
@@ -168,7 +170,7 @@ def enter_phone(update: Update, context: CallbackContext) -> str:
         )
     return new_visitor_role(update=update, context=context)
 
-
+@delete_prev_inline
 def new_visitor_role(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
@@ -181,8 +183,7 @@ def new_visitor_role(update: Update, context: CallbackContext) -> str:
 @delete_prev_inline
 def new_client(update: Update, context: CallbackContext) -> str:
     db.create_client(telegram_id=update.effective_chat.id)
-    return subscription_alert(update=update, context=context)
-
+    return hello_client(update=update, context=context)
 
 
 @check_subscription
@@ -193,6 +194,34 @@ def hello_client(update: Update, context: CallbackContext) -> str:
         reply_markup=CLIENT_INLINE_KEYBOARD
     )
     return 'CLIENT'
+
+
+@delete_prev_inline
+def new_contractor(update: Update, context: CallbackContext) -> str:
+    context.bot.send_message(
+        update.effective_chat.id,
+        text=messages.NEW_CONTRACTOR,
+        reply_markup=CANCEL_INLINE
+    )
+    return 'NEW_CONTRACTOR'
+
+@delete_prev_inline
+def new_contractor_message(update: Update, context: CallbackContext) -> str:
+    if len(update.message.text) >= 1000:
+        context.bot.send_message(
+            update.effective_chat.id,
+            messages.TOO_MUCH_REQUEST_SYMBOLS
+        )
+        return 'NEW_CONTRACTOR'
+    db.create_contractor(
+        telegram_id=update.effective_chat.id,
+        comment=update.message.text
+    )
+    context.bot.send_message(
+        update.effective_chat.id,
+        text=messages.NEW_CONTRACTOR_CREATED
+    )
+    return new_client(update=update, context=context)
 
 
 def hello_contractor(update: Update, context: CallbackContext) -> str:
@@ -289,14 +318,7 @@ def confirm_payment(redis: Redis, update: Update, context: CallbackContext) -> N
     )
 
 
-@delete_prev_inline
-def new_contractor(update: Update, context: CallbackContext) -> str:
-    context.bot.send_message(
-        update.effective_chat.id,
-        text=messages.NEW_CONTRACTOR,
-        reply_markup=NEW_CONTRUCTOR_INLINE_KEYBOARD
-    )
-    return 'VISITOR'
+
 
 
 @delete_prev_inline
@@ -425,8 +447,6 @@ class Command(BaseCommand):
                     'VISITOR': [
                         CallbackQueryHandler(new_client, pattern=buttons.NEW_CLIENT['callback_data']),
                         CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
-                        CallbackQueryHandler(cancel_new_contractor, pattern=buttons.CANCEL_NEW_CONTRACTOR['callback_data']),
-                        CallbackQueryHandler(contractor_salary, pattern=buttons.CONTRACTOR_SALARY['callback_data'])
                     ],
                     'VISITOR_PHONENUMBER': [
                         MessageHandler(filters=Filters.all, callback=enter_phone),
@@ -436,15 +456,16 @@ class Command(BaseCommand):
                     ],
                     'SUBSCRIPTION': [
                         CallbackQueryHandler(partial(activate_subscription, redis), pattern='activate_subscription'),
-                        CallbackQueryHandler(partial(cancel_new_request, redis), pattern=buttons.CANCEL['callback_data']),
+                        CallbackQueryHandler(new_visitor_role, pattern=buttons.CANCEL['callback_data']),
                         PreCheckoutQueryHandler(partial(confirm_payment, redis)),
                         MessageHandler(Filters.successful_payment, hello_client)
                     ],
-                    'NEW_CONTRACTOR_FORM': [
-
+                    'NEW_CONTRACTOR': [
+                        CallbackQueryHandler(new_client, pattern=buttons.CANCEL['callback_data']),
+                        MessageHandler(Filters.text, new_contractor_message)
                     ],
                     'CLIENT': [
-                        
+                        CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
                         CallbackQueryHandler(new_request, pattern=buttons.NEW_REQUEST['callback_data']),
                         CallbackQueryHandler(partial(cancel_new_request, redis), pattern=buttons.CANCEL['callback_data']),
                     ],
