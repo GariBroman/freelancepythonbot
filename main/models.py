@@ -38,13 +38,13 @@ class Client(models.Model):
 
     def get_current_orders(self):
 
-        subscriptions = [subscription for subscription in self.subscriptions if subscription.is_actual()]
+        subscriptions = [subscription for subscription in self.subscriptions.all() if subscription.is_actual()]
+        orders = list()
+        for subscription in subscriptions:
+            for order in subscription.orders.all():
+                if order.finished_at is None and order.declined==False:
+                    orders.append(order)
 
-        orders = [
-            order for order in [
-                subscription.orders for subscription in subscriptions
-            ] if order.finished_at is None and order.declined==False
-        ]
 
         serialize_order = []
         for order in orders:
@@ -152,6 +152,16 @@ class Tariff(models.Model):
 
         return f'{days_str}{hours_str}{minutes_str}{seconds_str}'
 
+    def display(self) -> str:
+        #TODO move this bullshit to subscription.info_subscription
+        return dedent(
+            f"""
+            {self.title}.
+
+            {self.orders_limit} заявок в месяц.
+            """
+        )
+
 
 class ClientSubscription(models.Model):
     client = models.ForeignKey(
@@ -185,7 +195,7 @@ class ClientSubscription(models.Model):
         return f'{self.client}, {self.tariff} Остаток заявок: {self.orders_left()}'
 
     def orders_left(self):
-        return self.tariff.orders_limit - len(self.client.orders.all())
+        return self.tariff.orders_limit - len(self.orders.all())
 
     def expired_at(self):
         return self.started_at + self.tariff.validity
@@ -195,9 +205,13 @@ class ClientSubscription(models.Model):
 
     def info_subscription(self):
         info = dedent(
-            f'Тарифный план: {self.tariff.name}'
-            f'Доступных заявок: {self.orders_left()}'
-            f'Подписка закончится: {self.expired_at()}'
+            f"""
+            Тарифный план: {self.tariff.title}
+
+            Доступных заявок: {self.orders_left()}
+            
+            Подписка закончится: {self.expired_at().strftime('%Y-%m-%d')}
+            """
         )
         return info
 
@@ -237,6 +251,25 @@ class Order(models.Model):
     def __str__(self):
         contractor = self.contractor.person.name if self.contractor else ''
         return f'[{self.client.person.name}] {self.description[:50]} -> {contractor}'
+
+    def display(self) -> str:
+        #TODO
+        message = dedent(
+                f"""
+                {self.created_at.strftime('%Y-%m-%d')}
+
+                {self.description[:50]}...
+
+                Сроки выполнения: {self.estimated_time if self.estimated_time else 'производится оценка...'}
+                """
+        )
+        if self.contractor:
+            message += dedent(
+                """
+                В работе
+                """
+            )
+        return message
 
 
 class OrderComments(models.Model):

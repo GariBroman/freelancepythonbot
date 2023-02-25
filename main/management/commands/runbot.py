@@ -1,3 +1,5 @@
+from ast import Delete
+from contextlib import suppress
 from pydoc import visiblename
 from textwrap import dedent
 from functools import partial
@@ -22,6 +24,7 @@ from telegram import (
     InlineKeyboardButton,
     LabeledPrice
 )
+from telegram.error import BadRequest
 from telegram.ext import (
     Updater,
     CommandHandler,
@@ -87,10 +90,11 @@ def delete_prev_inline(func, *args, **kwargs):
         except ValueError:
             update, context = kwargs['update'], kwargs['context']
         if update.callback_query:
-            context.bot.edit_message_reply_markup(
-                chat_id=update.effective_chat.id,
-                message_id=update.callback_query.message.message_id,
-            )
+            with suppress(BadRequest):
+                context.bot.edit_message_reply_markup(
+                    chat_id=update.effective_chat.id,
+                    message_id=update.callback_query.message.message_id,
+                )
         return func(*args, **kwargs)
     return wrapper
 
@@ -184,7 +188,6 @@ def new_client(update: Update, context: CallbackContext) -> str:
 
 
 @delete_prev_inline
-@check_subscription
 def hello_client(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
@@ -267,8 +270,32 @@ def display_current_orders(update: Update, context: CallbackContext) -> str:
 
 
 @delete_prev_inline
+def display_order(update: Update, context: CallbackContext) -> str:
+    _, order_id = update.callback_query.data.split(':::')
+    order = db.get_order(telegram_id=update.effective_chat.id, order_id=order_id)
+    order_buttons = [
+        [InlineKeyboardButton(
+            text=buttons.ORDER_COMMENT['text'],
+            callback_data=f'{buttons.ORDER_COMMENT["text"]}:::{order_id}'
+        )]
+    ]
+    if db.can_see_contractor_contacts(telegram_id=update.effective_chat.id):
+        order_buttons.append([
+            InlineKeyboardButton(
+                text=buttons.CONTRACTOR_CONTACTS['text'],
+                callback_data=f'{buttons.CONTRACTOR_CONTACTS["text"]}:::{order_id}'
+            )
+        ])
+    context.bot.send_message(
+        update.effective_chat.id,
+        text=order.display(),
+        reply_markup=InlineKeyboardMarkup(order_buttons)
+    )
+    return 'CLIENT'
+
+@delete_prev_inline
 def send_current_tariff(update: Update, context: CallbackContext) -> str:
-    client_tariff_info = db.get_client_tariff_info(telegram_id=update.effective_chat.id)
+    client_tariff_info = db.get_client_subscription_info(telegram_id=update.effective_chat.id)
     context.bot.send_message(
         update.effective_chat.id,
         text=client_tariff_info

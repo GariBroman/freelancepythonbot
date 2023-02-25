@@ -123,3 +123,13 @@ def get_order(telegram_id: str, order_id):
 
     if order.subscription in client.subscriptions:
         return order
+
+def get_client_subscription_info(telegram_id: int) -> str|None:
+    subscription = get_client(telegram_id=telegram_id).subscriptions.last()
+    if subscription:
+        return subscription.info_subscription()
+
+def can_see_contractor_contacts(telegram_id: int) -> bool:
+    subscription = get_client(telegram_id=telegram_id).subscriptions.last()
+    if subscription:
+        return subscription.tariff.contractor_contacts_availability
