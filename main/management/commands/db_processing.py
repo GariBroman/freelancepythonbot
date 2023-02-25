@@ -12,7 +12,7 @@ def get_role(telegram_id):
         elif person.contractors.all():
             return 'contractor'
         elif person.owners.all():
-            return 'owners'
+            return 'owner'
         elif person.managers.all():
             return 'manager'
 

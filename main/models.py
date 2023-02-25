@@ -16,27 +16,18 @@ class Person(models.Model):
     def __str__(self):
         return f'{self.name} ({self.phone})'
 
-    def user_name(self):
-        return self.name
-
-    def user_phone(self):
-        return self.phone
-
-    def user_id(self):
-        return self.telegram_id
-
 
 class Client(models.Model):
     person = models.OneToOneField(
         Person,
-        verbose_name='Заказчик',
+        verbose_name='Клиент',
         related_name='clients',
         on_delete=models.PROTECT
     )
 
     class Meta:
-        verbose_name = 'заказчик'
-        verbose_name_plural = 'заказчики'
+        verbose_name = 'клиент'
+        verbose_name_plural = 'клиенты'
 
     def __str__(self):
         return f'{self.person.name} ({self.person.phone})'
@@ -180,6 +171,7 @@ class Order(models.Model):  # TODO проверить почему нет Client
     description = models.TextField('Текст заявки')
     created_at = models.DateTimeField('Заказ создан', auto_now_add=True, db_index=True)
     take_at = models.DateTimeField('Взят в работу', null=True, blank=True, db_index=True)
+    estimated_time = models.DateTimeField('Срок выполнения заказа', null=True, blank=True, db_index=True)
     finished_at = models.DateTimeField('Заказ выполнен', null=True, blank=True, db_index=True)
     
     class Meta:
