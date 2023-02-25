@@ -178,6 +178,7 @@ class ClientSubscription(models.Model):
             f'Доступных заявок: {self.orders_left()}'
             f'Подписка закончится: {self.expired_at()}'
         )
+        return info
 
 
 class Order(models.Model):  # TODO проверить почему нет Client в заказе
