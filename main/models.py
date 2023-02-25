@@ -37,7 +37,7 @@ class Client(models.Model):
         return self.subscriptions.last().orders_left() > 0
 
     def get_current_orders(self):
-        orders = self.orders.exclude(declined=True).order_by('created_at')
+        orders = self.orders.exclude(declined=True).filter(finished_at=None).order_by('created_at')
         serialize_order = []
         for order in orders:
             serialize_order.append(
