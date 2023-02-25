@@ -107,8 +107,16 @@ class Tariff(models.Model):
         return self.title
 
     def payment_description(self):
-        description = f'Тариф: {self.title}\nЛимит заявок в месяц: {self.orders_limit}\n'
-        description += f'Стоимость подписки: {self.price}\n'
+        description = (
+            f'Тариф: {self.title}\nЛимит заявок в месяц: {self.orders_limit}\n'
+            f'Стоимость подписки: {self.price}\n'
+            f'Ответ на заявку в течении: {self.display_answer_delay()}\n'
+            f'Срок действия тарифа: {self.validity.total_seconds() // 86400} дн.\n'
+        )
+        if self.contractor_contacts_availability:
+            description += '\nВозможность получить контакты Исполнителя'
+        if self.personal_contractor_available:
+            description += '\nВозможность закрепить персонального исполнителя'
 
         return description
 
@@ -124,11 +132,10 @@ class Tariff(models.Model):
 
         days_str = f'{days} дн. ' if days else ''
         hours_str = f'{hours} ч. ' if hours else ''
-        minutes_str = f'{minutes}мин ' if minutes else ''
-        seconds_str = f'{seconds}сек ' if seconds and not hours_str else ''
+        minutes_str = f'{minutes} мин ' if minutes else ''
+        seconds_str = f'{seconds} сек ' if seconds and not hours_str else ''
 
         return f'{days_str}{hours_str}{minutes_str}{seconds_str}'
-
 
 
 class ClientSubscription(models.Model):
