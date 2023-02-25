@@ -36,7 +36,7 @@ def get_client(telegram_id: str):
 def is_actual_subscription(telegram_id: str) -> bool:
     try:
         client = main_models.Client.objects.get(person__telegram_id=telegram_id)
-        return len([subscription.is_actual for subscription in client.client_subscriptions]) > 0
+        return client.client_subscriptions.last().is_actual()
     except main_models.Client.DoesNotExist:
         return False
 

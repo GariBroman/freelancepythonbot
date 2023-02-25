@@ -108,15 +108,9 @@ class Tariff(models.Model):
 
     def payment_description(self):
         description = (
-            f'Тариф: {self.title}\nЛимит заявок в месяц: {self.orders_limit}\n'
-            f'Стоимость подписки: {self.price}\n'
             f'Ответ на заявку в течении: {self.display_answer_delay()}\n'
             f'Срок действия тарифа: {self.validity.total_seconds() // 86400} дн.\n'
         )
-        if self.contractor_contacts_availability:
-            description += '\nВозможность получить контакты Исполнителя'
-        if self.personal_contractor_available:
-            description += '\nВозможность закрепить персонального исполнителя'
 
         return description
 
