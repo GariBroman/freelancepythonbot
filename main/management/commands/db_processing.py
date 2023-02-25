@@ -20,14 +20,13 @@ def get_role(telegram_id):
         return 'visitor'
 
 
-def create_client(telegram_id: str,
+def create_person(telegram_id: int,
                   username: str,
-                  role: str = 'client') -> None:
+                  phonenumber: str) -> None:
 
     person, _ = main_models.Person.objects.update_or_create(
-        telegram_id=telegram_id, name=username, defaults={'telegram_id': telegram_id}
+        telegram_id=telegram_id, defaults={'name': username, 'phone': phonenumber}
     )
-    main_models.Client.objects.create(person=person)
 
 
 def get_client(telegram_id: str):
