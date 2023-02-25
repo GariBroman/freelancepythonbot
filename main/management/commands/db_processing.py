@@ -34,11 +34,12 @@ def get_client(telegram_id: str):
 
 
 def is_actual_subscription(telegram_id: str) -> bool:
-    ### TODO запрос приходит когда клиента вообще еще нет в базе пока закомментировал
-    # client = main_models.Person.objects.get(telegram_id=telegram_id)
-    #
-    # return len([subscription.is_actual for subscription in client.client_subscriptions]) > 0
-    pass
+    try:
+        client = main_models.Client.objects.get(person__telegram_id=telegram_id)
+        return len([subscription.is_actual for subscription in client.client_subscriptions]) > 0
+    except main_models.Client.DoesNotExist:
+        return False
+
 
 def is_client_phone(telegram_id: str) -> bool:  ## TODO !!!Может обозвать is_person_phone()?
     ### запрос приходит когда клиента вообще еще нет в базе пока закомментировал
