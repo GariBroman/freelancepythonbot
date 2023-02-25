@@ -10,8 +10,10 @@ CREATE_SUBSCRIPTION = {'text': 'Оформить подписку', 'callback_da
 
 FILL_CONTRACTOR_FORM = {'text': 'Заполнить анкету', 'callback_data': 'fill_contractor_form'}
 
-NEW_CONTRACTOR = {'text': 'Я сам техподдержка', 'callback_data': 'new_contractor'}
+NEW_CONTRACTOR = {'text': 'Стать подрядчиком', 'callback_data': 'new_contractor'}
 
-NEW_CLIENT = {'text': 'Мне нужна техподдержка', 'callback_data': 'new_client'}
+NEW_CLIENT = {'text': 'Стать клиентом', 'callback_data': 'new_client'}
 
 NEW_REQUEST = {'text': 'Отправить заявку', 'callback_data': 'new_request'}
+
+PHONENUMBER_REQUEST = 'Поделиться номером'

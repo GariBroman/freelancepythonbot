@@ -1,5 +1,5 @@
 from textwrap import dedent
-
+import main.management.commands.buttons as buttons
 # Просьба сохранять алфавитный порядок
 
 
@@ -24,12 +24,23 @@ DESCRIBE_REQUEST = dedent(
 )
 
 HELLO_VISITOR = dedent(
-    """
+    f"""
     Здравствуйте!
-    Я первая линия поддержки пользователей.
+    Для регистрации введите номер телефона или нажмите кнопку "{buttons.PHONENUMBER_REQUEST}".
+
+    Отправляя ваши персональные данные вы соглашаетесь с политикой конфиденциальности.
     """
 )
 
+NEW_VISITOR_ROLE = dedent(
+    f"""
+    Выберите вашу роль.
+
+    "{buttons.NEW_CLIENT['text']}" - вам нужна помощь технического специалиста.
+
+    "{buttons.NEW_CONTRACTOR['text']}" - вы технический специалист и хотите работать с нами.
+    """
+)
 NEW_CONTRACTOR = dedent(
     """
     Для того, чтобы стать исполнителем, вам необходимо заполнить анкету.
@@ -49,7 +60,7 @@ PHONE_INSTEAD_REQUEST = dedent(
     '''
 )
 
-PHONE_SAVED = 'Номер сохранен'
+REGISTRATION_COMPLETE = 'Вы успешно зарегистрировались'
 
 SUBSCRIPTION_ALERT = dedent(
     """
@@ -82,5 +93,7 @@ def invalid_number(phonenumber: str) -> str:
         Похожу что вы с ошибкой отправили номер телефона.
         Не могу распознать номер "{phonenumber}".
         Попробуйте еще раз или просто воспользуйтесь кнопкой.
+
+        ВНИМАНИЕ! Регистрация является обязательным условием использования сервиса.
         '''
     )

@@ -1,6 +1,10 @@
 from pydoc import visiblename
 from textwrap import dedent
 from functools import partial
+from time import sleep
+import re
+import os
+from uuid import uuid4
 
 from django.core.management.base import BaseCommand
 from environs import Env
@@ -15,7 +19,8 @@ from telegram import (
     KeyboardButton,
     Update,
     InlineKeyboardMarkup,
-    InlineKeyboardButton
+    InlineKeyboardButton,
+    LabeledPrice
 )
 from telegram.ext import (
     Updater,
@@ -24,7 +29,8 @@ from telegram.ext import (
     CallbackContext,
     CallbackQueryHandler,
     ConversationHandler,
-    Filters
+    Filters,
+    PreCheckoutQueryHandler
 )
 
 import main.management.commands.db_processing as db
@@ -66,6 +72,19 @@ CANCEL_INLINE = InlineKeyboardMarkup(
 )
 
 
+def check_access(update: Update, context: CallbackContext) -> str:
+    role = db.get_role(telegram_id=update.effective_chat.id)
+    if role == 'admin':
+        return hello_admin(update=update, context=context)
+    elif role == 'manager':
+        return hello_manager(update=update, context=context)
+    elif role == 'contractor':
+        return hello_contractor(update=update, context=context)
+    elif role == 'client':
+        return hello_client(update=update, context=context)
+    return hello_visitor(update=update, context=context)
+
+
 def delete_prev_inline(func, *args, **kwargs):
     def wrapper(*args, **kwargs):
         update, context = args[-2:]
@@ -92,7 +111,100 @@ def subscription_alert(update: Update, context: CallbackContext) -> str:
         update.effective_chat.id,
         messages.SUBSCRIPTION_ALERT
     )
+    sleep(2)
     return tell_about_subscription(update=update, context=context)
+
+
+def hello_visitor(update: Update, context: CallbackContext) -> str:
+    context.bot.send_document(
+            chat_id=update.effective_chat.id,
+            document=open('privacy_policy.pdf', 'rb'),
+            caption=messages.HELLO_VISITOR,
+            reply_markup=ReplyKeyboardMarkup(
+            [[KeyboardButton(
+                text=buttons.PHONENUMBER_REQUEST,
+                request_contact=True
+            )]],
+            resize_keyboard=True
+        )
+    )
+    return 'VISITOR_PHONENUMBER'
+
+
+def enter_phone(update: Update, context: CallbackContext) -> str:
+    if update.message.contact:
+        phonenumber = update.message.contact.phone_number
+        if phonenumber[0] != '+':
+            phonenumber = f'+{phonenumber}'
+    elif re.match(r'^\+?\d{7,15}$', update.message.text):
+        phonenumber = update.message.text
+        if phonenumber[0] != '+':
+            phonenumber = f'+{phonenumber}'
+        try:
+            validate_international_phonenumber(phonenumber)
+        except ValidationError:
+            context.bot.send_message(
+                update.effective_chat.id,
+                messages.invalid_number(phonenumber=phonenumber),
+            )
+            return 'VISITOR_PHONENUMBER'
+    else:
+        context.bot.send_message(
+            update.effective_chat.id,
+            text=messages.invalid_number(phonenumber=update.message.text)
+        )
+        return 'VISITOR_PHONENUMBER'
+    
+    username = update.effective_chat.first_name or update.effective_chat.username \
+        or update.effective_chat.last_name
+    db.create_person(telegram_id=update.effective_chat.id, username=username, phonenumber=phonenumber)
+    context.bot.send_message(
+            update.effective_chat.id,
+            messages.REGISTRATION_COMPLETE,
+            reply_markup=ReplyKeyboardRemove()
+        )
+    return new_visitor_role(update=update, context=context)
+
+
+def new_visitor_role(update: Update, context: CallbackContext) -> str:
+    context.bot.send_message(
+        update.effective_chat.id,
+        text=messages.NEW_VISITOR_ROLE,
+        reply_markup=VISITOR_INLINE_KEYBOARD
+    )
+    return 'VISITOR'
+
+
+@delete_prev_inline
+def new_client(update: Update, context: CallbackContext) -> str:
+    db.create_client(telegram_id=update.effective_chat.id)
+    return subscription_alert(update=update, context=context)
+
+
+
+@check_subscription
+def hello_client(update: Update, context: CallbackContext) -> str:
+    context.bot.send_message(
+        update.effective_chat.id,
+        text="Добро пожаловать!",
+        reply_markup=CLIENT_INLINE_KEYBOARD
+    )
+    return 'CLIENT'
+
+
+def hello_contractor(update: Update, context: CallbackContext) -> str:
+    #TODO
+    return 'CONTRACTOR'
+
+
+def hello_admin(update: Update, context: CallbackContext) -> str:
+    #TODO
+    return 'CONTRACTOR'
+
+
+def hello_manager(update: Update, context: CallbackContext) -> str:
+    #TODO
+    return 'CONTRACTOR'
 
 
 def tell_about_subscription(update: Update, context: CallbackContext) -> str:
@@ -105,6 +217,7 @@ def tell_about_subscription(update: Update, context: CallbackContext) -> str:
                 {tariff.title}:
                 {tariff.orders_limit} заявок в месяц.
                 Время ответа на заявку: {tariff.answer_delay}
+                Время ответа на заявку: tariff.display_answer_delay() TODO
                 """
         )
         if tariff.personal_contractor_available:
@@ -127,6 +240,7 @@ def tell_about_subscription(update: Update, context: CallbackContext) -> str:
                 )
             ]
         )
+    subscription_buttons.append([InlineKeyboardButton(**buttons.CANCEL)])
     context.bot.send_message(
         update.effective_chat.id,
         message,
@@ -135,44 +249,41 @@ def tell_about_subscription(update: Update, context: CallbackContext) -> str:
     return 'SUBSCRIPTION'
 
 
-def activate_subscription(update: Update, context: CallbackContext) -> str:
+def activate_subscription(redis: Redis, update: Update, context: CallbackContext) -> str:
     _, tariff_id = update.callback_query.data.split(":")
-    
-    #TODO
-
-    return 'SUBSCRIPTION'
-
-
-
-def check_access(update: Update, context: CallbackContext) -> str:
-    role = db.get_role(telegram_id=update.effective_chat.id)
-    if role == 'admin':
-        # send smth to admin
-
-        return 'ADMIN'
-    elif role == 'contractor':
-        # send smth to contractor
-
-        return 'CONTRACTOR'
-    elif role == 'client':
-        context.bot.send_message(
-            update.effective_chat.id,
-            text=dedent(
-                """
-                Добро пожаловать!
-                """
-            ),
-            reply_markup=CLIENT_INLINE_KEYBOARD
-        )
-        return 'CLIENT'
-    
-    # make smth with new user
-    context.bot.send_message(
-        update.effective_chat.id,
-        text=messages.HELLO_VISITOR,
-        reply_markup=VISITOR_INLINE_KEYBOARD
+    tariff = db.get_tariff(tariff_id=tariff_id)
+    payload=str(uuid4())
+    redis.set(payload, tariff_id)
+    redis.set(f'{payload}_user_id', update.effective_chat.id)
+    context.bot.send_invoice(
+        chat_id=update.effective_chat.id,
+        title=tariff.title,
+        description=tariff.payment_description(),
+        payload=payload,
+        provider_token=os.getenv('YOOKASSA_TOKEN'),
+        currency='RUB',
+        prices=[
+            LabeledPrice(label='RUB', amount=tariff.int_price())
+        ]
     )
-    return 'VISITOR'
+    return 'SUBSCRIPTION'
+    
+
+def confirm_payment(redis: Redis, update: Update, context: CallbackContext) -> None:
+    context.bot.answer_pre_checkout_query(
+        pre_checkout_query_id=update.pre_checkout_query.id,
+        ok=True
+    )
+    payload = update.pre_checkout_query.invoice_payload
+    tariff_id = redis.get(payload)
+    redis.delete(payload)
+    telegram_id = redis.get(f'{payload}_user_id')
+    redis.delete(f'{payload}_user_id')
+    db.create_subscription(
+        telegram_id=telegram_id,
+        tariff_id=tariff_id,
+        payment_id=payload
+    )
 
 
 @delete_prev_inline
@@ -208,16 +319,7 @@ def cancel_new_contractor(update: Update, context: CallbackContext) -> str:
     return 'VISITOR'
 
 
-@delete_prev_inline
-def new_client(update: Update, context: CallbackContext) -> str:
-    username = update.effective_chat.first_name or update.effective_chat.username or update.effective_chat.last_name
-    db.create_client(telegram_id=update.effective_chat.id, username=username)
-    context.bot.send_message(
-        update.effective_chat.id,
-        text=messages.WELCOME,
-        reply_markup=CLIENT_INLINE_KEYBOARD
-    )
-    return 'CLIENT'
+
 
 
 @delete_prev_inline
@@ -266,37 +368,7 @@ def client_message(redis: Redis, update: Update, context: CallbackContext) -> st
     return finish_request(redis=redis, update=update, context=context)
 
 
-def enter_phone(redis: Redis, update: Update, context: CallbackContext) -> str:
-    message = redis.get(f'{update.effective_chat.id}_message')
-    if not message:
-        context.bot.send_message(
-            update.effective_chat.id,
-            messages.PHONE_INSTEAD_REQUEST,
-        )
-        return 'CLIENT'
-    if not update.message.contact:
-        phonenumber = update.message.text
-        if phonenumber[0] != '+':
-            phonenumber = f'+{phonenumber}'
-        try:
-            validate_international_phonenumber(phonenumber)
-        except ValidationError:
-            context.bot.send_message(
-                update.effective_chat.id,
-                messages.invalid_number(phonenumber=phonenumber),
-            )
-            return 'CLIENT'
-    else:
-        phonenumber = update.message.contact.phone_number
-        if phonenumber[0] != '+':
-            phonenumber = f'+{phonenumber}'
-    db.update_client_phone(telegram_id=update.effective_chat.id, phonenumber=phonenumber)
-    context.bot.send_message(
-            update.effective_chat.id,
-            messages.PHONE_SAVED,
-            reply_markup=ReplyKeyboardRemove()
-        )
-    return finish_request(redis=redis, update=update, context=context)
+
 
 
 @check_subscription
@@ -340,6 +412,7 @@ class Command(BaseCommand):
         updater = Updater(token=env.str('TELEGRAM_BOT_TOKEN'), use_context=True)
         redis = Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
+        
         updater.dispatcher.add_handler(
             ConversationHandler(
                 entry_points = [
@@ -352,16 +425,23 @@ class Command(BaseCommand):
                         CallbackQueryHandler(cancel_new_contractor, pattern=buttons.CANCEL_NEW_CONTRACTOR['callback_data']),
                         CallbackQueryHandler(contractor_salary, pattern=buttons.CONTRACTOR_SALARY['callback_data'])
                     ],
+                    'VISITOR_PHONENUMBER': [
+                        MessageHandler(filters=Filters.all, callback=enter_phone),
+                    ],
+                    'NEW_CLIENT': [
+
+                    ],
                     'SUBSCRIPTION': [
-                        CallbackQueryHandler(activate_subscription, pattern='activate_subscription'),
+                        CallbackQueryHandler(partial(activate_subscription, redis), pattern='activate_subscription'),
+                        CallbackQueryHandler(partial(cancel_new_request, redis), pattern=buttons.CANCEL['callback_data']),
+                        PreCheckoutQueryHandler(partial(confirm_payment, redis)),
+                        MessageHandler(Filters.successful_payment, hello_client)
                     ],
                     'NEW_CONTRACTOR_FORM': [
 
                     ],
                     'CLIENT': [
-                        MessageHandler(filters=Filters.regex(r'^\+?\d{7,15}$'), callback=partial(enter_phone, redis)),
-                        MessageHandler(filters=Filters.contact, callback=partial(enter_phone, redis)),
-                        MessageHandler(filters=Filters.text, callback=partial(client_message, redis)),
+                        
                         CallbackQueryHandler(new_request, pattern=buttons.NEW_REQUEST['callback_data']),
                         CallbackQueryHandler(partial(cancel_new_request, redis), pattern=buttons.CANCEL['callback_data']),
                     ],
@@ -378,7 +458,7 @@ class Command(BaseCommand):
             )
         )
         
-
+        updater.dispatcher.add_handler(PreCheckoutQueryHandler(partial(confirm_payment, redis)))
 
         updater.start_polling()
         updater.idle()
