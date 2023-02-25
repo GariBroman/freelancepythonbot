@@ -66,3 +66,14 @@ def get_tariffs() -> QuerySet:
 
 def get_tariff(tariff_id: str):
     return main_models.Tariff.objects.get(id=int(tariff_id))
+
+
+def create_subscription(telegram_id: str, tariff_id:str, payment_id: str):
+    client = main_models.Client.objects.get(person__telegram_id=telegram_id)
+    tariff = main_models.Tariff.objects.get(id=tariff_id)
+
+    main_models.ClientSubscription.objects.create(
+        client=client,
+        tariff=tariff,
+        payment_id=payment_id
+    )
