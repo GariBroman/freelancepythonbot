@@ -104,3 +104,9 @@ def create_order(telegram_id: str, description: str):
         client=client,
         description=description
     )
+
+
+def get_current_client_orders(telegram_id: int) -> list[dict]:
+    client = main_models.Client.objects.get(person__telegram_id=telegram_id)
+
+    return client.get_current_orders()
