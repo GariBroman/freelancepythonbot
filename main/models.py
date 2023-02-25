@@ -60,6 +60,8 @@ class Contractor(models.Model):
         related_name='contractors',
         on_delete=models.PROTECT
     )
+    active = models.BooleanField('исполнитель утвержден', default=False)
+    comment = models.TextField('заявка на утверждение', blank=True)
 
     class Meta:
         verbose_name = 'подрядчик'
