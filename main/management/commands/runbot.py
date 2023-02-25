@@ -183,6 +183,7 @@ def new_client(update: Update, context: CallbackContext) -> str:
     return hello_client(update=update, context=context)
 
 
+@delete_prev_inline
 @check_subscription
 def hello_client(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
@@ -235,6 +236,29 @@ def cancel_new_request(update: Update, context: CallbackContext) -> str:
         reply_markup=ReplyKeyboardRemove()
     )
     return hello_client(update=update, context=context)
+
+
+
+@delete_prev_inline
+def display_current_orders(update: Update, context: CallbackContext) -> str:
+    orders = db.get_current_client_orders(telegram_id=update.effective_chat.id)
+    orders_buttons = list()
+    message = 'Ваши заказы:'
+    for num, order in enumerate(orders, start=1):
+        message += f'\n\nЗаказ {num}.\n{order["created_at"]}: {order["description"][:50]}...'
+        orders_buttons.append([InlineKeyboardButton(
+            text=f'Заказ {num}',
+            callback_data=f'show_order:::{order["id"]}'
+        )])
+    orders_buttons.append([InlineKeyboardButton(**buttons.BACK_TO_CLIENT_MAIN)])
+    context.bot.send_message(
+        update.effective_chat.id,
+        text=message,
+        reply_markup=InlineKeyboardMarkup(orders_buttons)
+    )
+    return 'CLIENT'
+
+
 
 
 
@@ -414,6 +438,8 @@ class Command(BaseCommand):
                         CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
                         CallbackQueryHandler(new_request, pattern=buttons.NEW_REQUEST['callback_data']),
                         CallbackQueryHandler(cancel_new_request, pattern=buttons.CANCEL['callback_data']),
+                        CallbackQueryHandler(display_current_orders, pattern=buttons.CLIENT_CURRENT_ORDERS['callback_data']),
+                        CallbackQueryHandler(hello_client, pattern=buttons.BACK_TO_CLIENT_MAIN['callback_data']),
                         MessageHandler(filters=Filters.all, callback=client_request_description)
                     ],
                     'CONTRACTOR': [

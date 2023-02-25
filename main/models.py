@@ -44,7 +44,7 @@ class Client(models.Model):
                 {
                     'id': order.id,
                     'description': order.description,
-                    'created at': order.created_at.strftime('%Y-%m-%d'),
+                    'created_at': order.created_at.strftime('%Y-%m-%d'),
                 }
             )
 

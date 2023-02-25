@@ -1,5 +1,7 @@
 # Просьба созранять алфавитный порядок
 
+BACK_TO_CLIENT_MAIN = {'text': 'На главную', 'callback_data': 'client_main'}
+
 CANCEL = {'text': "Я передумал", 'callback_data': 'cancel'}
 
 CLIENT_CURRENT_ORDERS = {'text': 'Мои текущие заказы', 'callback_data': 'client_current_orders'}
