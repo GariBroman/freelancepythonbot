@@ -31,9 +31,16 @@ def create_person(telegram_id: int,
         telegram_id=telegram_id, defaults={'name': username, 'phone': phonenumber}
     )
 
+
 def create_client(telegram_id: str) -> None:
     person = main_models.Person.objects.get(telegram_id=telegram_id)
     main_models.Client.objects.get_or_create(person=person)
+
+
+def create_contractor(telegram_id: str, comment: str) -> None:
+    person = main_models.Person.objects.get(telegram_id=telegram_id)
+    main_models.Contractor.objects.get_or_create(person=person, comment=comment)
+
 
 def get_client(telegram_id: str):
     return main_models.Client.objects.get(person__telegram_id=telegram_id)
