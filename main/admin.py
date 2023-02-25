@@ -25,11 +25,11 @@ class ClientSubscriptionInline(admin.TabularInline):
     extra = 0
 
 
-class OrderClientInline(admin.TabularInline):
-    fk_name = 'client'
-    fields = ('contractor', 'description')
-    model = Order
-    extra = 0
+# class OrderClientInline(admin.TabularInline):
+#     fk_name = 'subscription'
+#     fields = ('contractor', 'description')
+#     model = Order
+#     extra = 0
 
 
 class OrderContractorInline(admin.TabularInline):
@@ -74,7 +74,7 @@ class PersonAdmin(admin.ModelAdmin):
 class ClientAdmin(admin.ModelAdmin):
     inlines = [
         ClientSubscriptionInline,
-        OrderClientInline
+        # OrderClientInline
     ]
 
 

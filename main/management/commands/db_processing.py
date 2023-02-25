@@ -98,10 +98,10 @@ def create_subscription(telegram_id: str, tariff_id:str, payment_id: str):
 
 
 def create_order(telegram_id: str, description: str):
-    client = main_models.Client.objects.get(person__telegram_id=telegram_id)
+    subscription = main_models.Client.objects.get(person__telegram_id=telegram_id).subscriptions.last()
 
     main_models.Order.objects.create(
-        client=client,
+        subscription=subscription,
         description=description
     )
 

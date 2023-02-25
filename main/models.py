@@ -37,7 +37,15 @@ class Client(models.Model):
         return self.subscriptions.last().orders_left() > 0
 
     def get_current_orders(self):
-        orders = self.orders.exclude(declined=True).filter(finished_at=None).order_by('created_at')
+
+        subscriptions = [subscription for subscription in self.subscriptions if subscription.is_actual()]
+
+        orders = [
+            order for order in [
+                subscription.orders for subscription in subscriptions
+            ] if order.finished_at is None and order.declined==False
+        ]
+
         serialize_order = []
         for order in orders:
             serialize_order.append(
@@ -47,8 +55,8 @@ class Client(models.Model):
                     'created_at': order.created_at.strftime('%Y-%m-%d'),
                 }
             )
-
         return serialize_order
+
 
 class Owner(models.Model):
     person = models.OneToOneField(
@@ -194,9 +202,9 @@ class ClientSubscription(models.Model):
         return info
 
 
-class Order(models.Model):  # TODO проверить почему нет Client в заказе
-    client = models.ForeignKey(
-        Client,
+class Order(models.Model):
+    subscription = models.ForeignKey(
+        ClientSubscription,
         related_name='orders',
         verbose_name='Подписка',
         on_delete=models.PROTECT
@@ -228,7 +236,7 @@ class Order(models.Model):  # TODO проверить почему нет Client
 
     def __str__(self):
         contractor = self.contractor.person.name if self.contractor else ''
-        return f"[{self.client.person.name}] {self.description[:50]} -> {contractor}"
+        return f'[{self.client.person.name}] {self.description[:50]} -> {contractor}'
 
 
 class OrderComments(models.Model):
