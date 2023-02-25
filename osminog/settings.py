@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'main',
     'phonenumber_field',
+    'nested_admin',
 ]
 
 MIDDLEWARE = [

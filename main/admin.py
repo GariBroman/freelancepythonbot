@@ -13,28 +13,35 @@ from main.models import (
     Person
 )
 
+import nested_admin
+
 
 class OrderCommentsInline(admin.TabularInline):
     model = OrderComments
+    fields = ('created_at', 'comment')
+    readonly_fields = ('created_at',)
     extra = 0
 
 
-class ClientSubscriptionInline(admin.TabularInline):
+class OrderSubscriptionInline(nested_admin.NestedTabularInline):
+    fk_name = 'subscription'
+    fields = ('contractor', 'description')
+    model = Order
+    extra = 0
+
+
+class ClientSubscriptionInline(nested_admin.NestedTabularInline):
     fk_name = 'client'
     model = ClientSubscription
     extra = 0
-
-
-# class OrderClientInline(admin.TabularInline):
-#     fk_name = 'subscription'
-#     fields = ('contractor', 'description')
-#     model = Order
-#     extra = 0
+    inlines = [
+        OrderSubscriptionInline
+    ]
 
 
 class OrderContractorInline(admin.TabularInline):
     fk_name = 'contractor'
-    fields = ('client', 'description')
+    fields = ('subscription', 'description')
     model = Order
     extra = 0
 
@@ -71,10 +78,9 @@ class PersonAdmin(admin.ModelAdmin):
 
 
 @admin.register(Client)
-class ClientAdmin(admin.ModelAdmin):
+class ClientAdmin(nested_admin.NestedModelAdmin):
     inlines = [
         ClientSubscriptionInline,
-        # OrderClientInline
     ]
 
 

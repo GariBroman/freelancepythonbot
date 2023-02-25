@@ -3,3 +3,4 @@ environs==9.5.0
 python-telegram-bot==13.15
 django-phonenumber-field[phonenumbers]==7.0.2
 redis==4.5.1
+django-nested-admin==4.0.2
