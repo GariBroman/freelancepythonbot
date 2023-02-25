@@ -110,3 +110,8 @@ def get_current_client_orders(telegram_id: int) -> list[dict]:
     client = main_models.Client.objects.get(person__telegram_id=telegram_id)
 
     return client.get_current_orders()
+
+def is_available_request(telegram_id: int) -> bool:
+    client = main_models.Client.objects.get(person__telegram_id=telegram_id)
+
+    return client.is_new_request_available()
