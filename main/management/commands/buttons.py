@@ -1,10 +1,10 @@
 # Просьба созранять алфавитный порядок
 
-CANCEL_NEW_CONTRACTOR = {'text': 'Я передумал', 'callback_data': 'cancel_new_contractor'}
-
 CANCEL = {'text': "Я передумал", 'callback_data': 'cancel'}
 
-CONTRACTOR_SALARY = {'text': 'Сколько я буду зарабатывать', 'callback_data': 'contractor_salary'}
+CLIENT_CURRENT_ORDERS = {'text': 'Мои текущие заказы', 'callback_data': 'client_current_orders'}
+
+CLIENT_CURRENT_TARIFF = {'text': 'Мой тариф', 'callback_data': 'client_current_tariff'}
 
 CREATE_SUBSCRIPTION = {'text': 'Оформить подписку', 'callback_data': 'create_subscription'}
 
