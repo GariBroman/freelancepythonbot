@@ -1,4 +1,4 @@
-
+from textwrap import dedent
 from django.db import models
 from django.utils.timezone import now, timedelta
 from phonenumber_field.modelfields import PhoneNumberField
@@ -171,6 +171,13 @@ class ClientSubscription(models.Model):
 
     def is_actual(self):
         return now() <= self.started_at + self.tariff.validity
+
+    def info_subscription(self):
+        info = dedent(
+            f'Тарифный план: {self.tariff.name}'
+            f'Доступных заявок: {self.orders_left()}'
+            f'Подписка закончится: {self.expired_at()}'
+        )
 
 
 class Order(models.Model):  # TODO проверить почему нет Client в заказе
