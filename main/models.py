@@ -157,8 +157,8 @@ class ClientSubscription(models.Model):
     payment_id = models.CharField(max_length=50, blank=True)
     
     class Meta:
-        verbose_name = 'договор клиента'
-        verbose_name_plural = 'договора клиентов'
+        verbose_name = 'подписка клиента'
+        verbose_name_plural = 'подписки клиентов'
 
     def __str__(self):
         return f'{self.client}, {self.tariff} Остаток заявок: {self.orders_left()}'
