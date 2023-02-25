@@ -250,7 +250,7 @@ class Order(models.Model):
 
     def __str__(self):
         contractor = self.contractor.person.name if self.contractor else ''
-        return f'[{self.client.person.name}] {self.description[:50]} -> {contractor}'
+        return f'[{self.subscription.client.person.name}] {self.description[:50]} -> {contractor}'
 
     def display(self) -> str:
         #TODO
