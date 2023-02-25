@@ -266,7 +266,14 @@ def display_current_orders(update: Update, context: CallbackContext) -> str:
     return 'CLIENT'
 
 
-
+@delete_prev_inline
+def send_current_tariff(update: Update, context: CallbackContext) -> str:
+    client_tariff_info = db.get_client_tariff_info(telegram_id=update.effective_chat.id)
+    context.bot.send_message(
+        update.effective_chat.id,
+        text=client_tariff_info
+    )
+    return hello_client(update=update, context=context)
 
 
 @delete_prev_inline
@@ -442,10 +449,12 @@ class Command(BaseCommand):
                         MessageHandler(Filters.text, new_contractor_message)
                     ],
                     'CLIENT': [
+                        
                         CallbackQueryHandler(tell_about_subscription, pattern=buttons.CREATE_SUBSCRIPTION['callback_data']),
                         CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
                         CallbackQueryHandler(new_request, pattern=buttons.NEW_REQUEST['callback_data']),
                         CallbackQueryHandler(cancel_new_request, pattern=buttons.CANCEL['callback_data']),
+                        CallbackQueryHandler(send_current_tariff, pattern=buttons.CLIENT_CURRENT_TARIFF['callback_data']),
                         CallbackQueryHandler(display_current_orders, pattern=buttons.CLIENT_CURRENT_ORDERS['callback_data']),
                         CallbackQueryHandler(hello_client, pattern=buttons.BACK_TO_CLIENT_MAIN['callback_data']),
                         MessageHandler(filters=Filters.all, callback=client_request_description)
