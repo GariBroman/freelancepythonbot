@@ -196,6 +196,13 @@ def hello_client(update: Update, context: CallbackContext) -> str:
 @delete_prev_inline
 @check_subscription
 def new_request(update: Update, context: CallbackContext) -> str:
+    if not db.is_available_request(telegram_id=update.effective_chat.id):
+        context.bot.send_message(
+            update.effective_chat.id,
+            text=messages.NO_AVAILABLE_REQUESTS,
+            reply_markup=SUBSCRIPTION_KEYBOARD
+        )
+        return 'CLIENT'
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.DESCRIBE_REQUEST,
@@ -435,6 +442,7 @@ class Command(BaseCommand):
                         MessageHandler(Filters.text, new_contractor_message)
                     ],
                     'CLIENT': [
+                        CallbackQueryHandler(tell_about_subscription, pattern=buttons.CREATE_SUBSCRIPTION['callback_data']),
                         CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
                         CallbackQueryHandler(new_request, pattern=buttons.NEW_REQUEST['callback_data']),
                         CallbackQueryHandler(cancel_new_request, pattern=buttons.CANCEL['callback_data']),

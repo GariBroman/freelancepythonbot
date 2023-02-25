@@ -60,6 +60,13 @@ NEW_CONTRACTOR_CREATED = dedent(
     """
 )
 
+NO_AVAILABLE_REQUESTS = dedent(
+    """
+    Похоже что вы достилги лимита заявок по вашей подписке.
+
+    Нужно больше заявок, можете приобрести дополнитеную подписку.
+    """
+)
 OK = 'Как скажете'
 
 PHONE_INSTEAD_REQUEST = dedent(
