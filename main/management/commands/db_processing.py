@@ -95,3 +95,6 @@ def create_subscription(telegram_id: str, tariff_id:str, payment_id: str):
         tariff=tariff,
         payment_id=payment_id
     )
+
+def create_contractor(*args, **kwargs):
+    pass
