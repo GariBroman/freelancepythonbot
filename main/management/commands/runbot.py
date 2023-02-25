@@ -48,6 +48,8 @@ VISITOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
 CLIENT_INLINE_KEYBOARD = InlineKeyboardMarkup(
     [
         [InlineKeyboardButton(**buttons.NEW_REQUEST)],
+        [InlineKeyboardButton(**buttons.CLIENT_CURRENT_ORDERS)],
+        [InlineKeyboardButton(**buttons.CLIENT_CURRENT_TARIFF)],
         [InlineKeyboardButton(**buttons.NEW_CONTRACTOR)]
     ]
 )
@@ -55,11 +57,6 @@ CLIENT_INLINE_KEYBOARD = InlineKeyboardMarkup(
 SUBSCRIPTION_KEYBOARD = InlineKeyboardMarkup(
     [
         [InlineKeyboardButton(**buttons.CREATE_SUBSCRIPTION)]
-    ]
-)
-NEW_CONTRUCTOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
-    [
-        [InlineKeyboardButton(**buttons.CANCEL_NEW_CONTRACTOR)]
     ]
 )
 
@@ -190,10 +187,55 @@ def new_client(update: Update, context: CallbackContext) -> str:
 def hello_client(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
-        text="Добро пожаловать!",
+        text=messages.CLIENT_MAIN,
         reply_markup=CLIENT_INLINE_KEYBOARD
     )
     return 'CLIENT'
+
+@delete_prev_inline
+@check_subscription
+def new_request(update: Update, context: CallbackContext) -> str:
+    context.bot.send_message(
+        update.effective_chat.id,
+        text=messages.DESCRIBE_REQUEST,
+        reply_markup=CANCEL_INLINE
+    )
+    return 'CLIENT'
+
+
+@delete_prev_inline
+@check_subscription
+def client_request_description(update: Update, context: CallbackContext) -> str:
+    if len(update.message.text) > 1000:
+        context.bot.send_message(
+            update.effective_chat.id,
+            text=messages.TOO_MUCH_REQUEST_SYMBOLS,
+            reply_markup=CANCEL_INLINE
+        )
+        return 'CLIENT'
+
+    db.create_order(
+        telegram_id=update.effective_chat.id,
+        description=update.message.text
+    )
+
+    context.bot.send_message(
+        update.effective_chat.id,
+        messages.SUCCESS_REQUEST
+    )
+    sleep(2)
+    return hello_client(update=update, context=context)
+
+
+@delete_prev_inline
+def cancel_new_request(update: Update, context: CallbackContext) -> str:
+    context.bot.send_message(
+        update.effective_chat.id,
+        text='Как скажете',
+        reply_markup=ReplyKeyboardRemove()
+    )
+    return hello_client(update=update, context=context)
+
 
 
 @delete_prev_inline
@@ -204,6 +246,7 @@ def new_contractor(update: Update, context: CallbackContext) -> str:
         reply_markup=CANCEL_INLINE
     )
     return 'NEW_CONTRACTOR'
+
 
 @delete_prev_inline
 def new_contractor_message(update: Update, context: CallbackContext) -> str:
@@ -317,20 +360,6 @@ def confirm_payment(redis: Redis, update: Update, context: CallbackContext) -> N
         payment_id=payload
     )
 
-
-
-
-
-@delete_prev_inline
-def contractor_salary(update: Update, context: CallbackContext) -> str:
-    context.bot.send_message(
-        update.effective_chat.id,
-        text=messages.NEW_CONTRACTOR_SALARY,
-        reply_markup=NEW_CONTRUCTOR_INLINE_KEYBOARD
-    )
-    return 'VISITOR'
-
-
 @delete_prev_inline
 def cancel_new_contractor(update: Update, context: CallbackContext) -> str:
     role = db.get_role(telegram_id=update.effective_chat.id)
@@ -343,86 +372,6 @@ def cancel_new_contractor(update: Update, context: CallbackContext) -> str:
         return role.upper()
     return 'VISITOR'
 
-
-
-
-
-@delete_prev_inline
-@check_subscription
-def new_request(update: Update, context: CallbackContext) -> str:
-    context.bot.send_message(
-        update.effective_chat.id,
-        text=messages.DESCRIBE_REQUEST,
-        reply_markup=CANCEL_INLINE
-    )
-    return 'CLIENT'
-
-
-def client_message(redis: Redis, update: Update, context: CallbackContext) -> str:
-    if len(update.message.text) > 1000:
-        context.bot.send_message(
-            update.effective_chat.id,
-            text=messages.TOO_MUCH_REQUEST_SYMBOLS,
-            reply_markup=CANCEL_INLINE
-        )
-        return 'CLIENT'
-
-    if redis.get(f'{update.effective_chat.id}_message'):
-        return enter_phone(redis=redis, update=update, context=context)
-
-    redis.set(f'{update.effective_chat.id}_message', update.message.text)
-    
-    if not db.is_client_phone(telegram_id=update.effective_chat.id): 
-        context.bot.send_message(
-            update.effective_chat.id,
-            text=messages.ASK_PHONENUMBER,
-            reply_markup=ReplyKeyboardMarkup(
-                [
-                    [KeyboardButton(text='Поделиться номером', request_contact=True)]
-                ],
-                resize_keyboard=True,
-            )
-        )
-        context.bot.send_document(
-            chat_id=update.effective_chat.id,
-            document=open('privacy_policy.pdf', 'rb'),
-            caption='Отправляя ваши персональные данные вы соглашаетесь с политикой конфиденциальности.',
-            reply_markup=CANCEL_INLINE
-        )
-        return 'CLIENT'
-    return finish_request(redis=redis, update=update, context=context)
-
-
-
-
-
-@check_subscription
-def finish_request(redis: Redis, update: Update, context: CallbackContext) -> str:
-    message = redis.get(f'{update.effective_chat.id}_message')
-    db.create_request(telegram_id=update.effective_chat.id, message=message)
-    redis.delete(f'{update.effective_chat.id}_message')
-    context.bot.send_message(
-        update.effective_chat.id,
-        messages.SUCCESS_REQUEST,
-        reply_markup=CLIENT_INLINE_KEYBOARD
-    )
-    return 'CLIENT'
-
-
-@delete_prev_inline
-def cancel_new_request(redis: Redis, update: Update, context: CallbackContext) -> str:
-    redis.delete(f'{update.effective_chat.id}_message')
-    context.bot.send_message(
-        update.effective_chat.id,
-        text='Как скажете',
-        reply_markup=ReplyKeyboardRemove()
-    )
-    context.bot.send_message(
-        update.effective_chat.id,
-        text='Возвращаемся на главную',
-        reply_markup=CLIENT_INLINE_KEYBOARD
-    )
-    return 'CLIENT'
 
 
 
@@ -451,9 +400,6 @@ class Command(BaseCommand):
                     'VISITOR_PHONENUMBER': [
                         MessageHandler(filters=Filters.all, callback=enter_phone),
                     ],
-                    'NEW_CLIENT': [
-
-                    ],
                     'SUBSCRIPTION': [
                         CallbackQueryHandler(partial(activate_subscription, redis), pattern='activate_subscription'),
                         CallbackQueryHandler(new_visitor_role, pattern=buttons.CANCEL['callback_data']),
@@ -467,7 +413,8 @@ class Command(BaseCommand):
                     'CLIENT': [
                         CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
                         CallbackQueryHandler(new_request, pattern=buttons.NEW_REQUEST['callback_data']),
-                        CallbackQueryHandler(partial(cancel_new_request, redis), pattern=buttons.CANCEL['callback_data']),
+                        CallbackQueryHandler(cancel_new_request, pattern=buttons.CANCEL['callback_data']),
+                        MessageHandler(filters=Filters.all, callback=client_request_description)
                     ],
                     'CONTRACTOR': [
 
