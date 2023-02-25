@@ -115,3 +115,11 @@ def is_available_request(telegram_id: int) -> bool:
     client = main_models.Client.objects.get(person__telegram_id=telegram_id)
 
     return client.is_new_request_available()
+
+
+def get_order(telegram_id: str, order_id):
+    client = main_models.Client.objects.get(person__telegram_id=telegram_id)
+    order = main_models.Order.objects.get(id=order_id)
+
+    if order.subscription in client.subscriptions:
+        return order
