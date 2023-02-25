@@ -7,17 +7,16 @@ from contextlib import suppress
 def get_role(telegram_id):
     try:
         person = get_object_or_404(main_models.Person, telegram_id=telegram_id)
-        with suppress((main_models.Person.clients.RelatedObjectDoesNotExist,
-                       main_models.Person.contractors.RelatedObjectDoesNotExist,
+        with suppress((main_models.Person.contractors.RelatedObjectDoesNotExist,
                        main_models.Person.owners.RelatedObjectDoesNotExist,
                        main_models.Person.managers.RelatedObjectDoesNotExist)):
-            if person.clients.all():
+            if person.clients:
                 return 'client'
-            elif person.contractors.all():
+            elif person.contractors:
                 return 'contractor'
-            elif person.owners.all():
+            elif person.owners:
                 return 'owner'
-            elif person.managers.all():
+            elif person.managers:
                 return 'manager'
 
     except Http404:
@@ -42,9 +41,13 @@ def get_client(telegram_id: str):
 
 def is_actual_subscription(telegram_id: str) -> bool:
     try:
+        
         client = main_models.Client.objects.get(person__telegram_id=telegram_id)
-        return client.client_subscriptions.last().is_actual()
-    except main_models.Client.DoesNotExist:
+        last_subscription = client.subscriptions.last()
+        if last_subscription:
+            return last_subscription.is_actual()
+        return False
+    except (main_models.Client.DoesNotExist,):
         return False
 
 

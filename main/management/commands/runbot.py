@@ -98,7 +98,10 @@ def delete_prev_inline(func, *args, **kwargs):
 
 def check_subscription(func, *args, **kwargs):
     def wrapper(*args, **kwargs):
-        update, context = args[-2:]
+        try:
+            update, context = args[-2:]
+        except ValueError:
+            update, context = kwargs['update'], kwargs['context']
         if db.is_actual_subscription(telegram_id=update.effective_chat.id):
             return func(*args, **kwargs)
         else:
