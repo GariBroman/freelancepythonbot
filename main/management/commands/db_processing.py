@@ -95,3 +95,12 @@ def create_subscription(telegram_id: str, tariff_id:str, payment_id: str):
         tariff=tariff,
         payment_id=payment_id
     )
+
+
+def create_order(telegram_id: str, description: str):
+    client = main_models.Client.objects.get(person__telegram_id=telegram_id)
+
+    main_models.Order.objects.create(
+        client=client,
+        description=description
+    )

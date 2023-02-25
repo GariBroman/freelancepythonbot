@@ -37,7 +37,7 @@ class Client(models.Model):
         return self.subscriptions.last().orders_left() > 0
 
     def get_current_orders(self):
-        orders = self.orders.all().order_by('created_at')
+        orders = self.orders.exclude(declined=True).order_by('created_at')
         serialize_order = []
         for order in orders:
             serialize_order.append(
@@ -215,6 +215,7 @@ class Order(models.Model):  # TODO проверить почему нет Client
         validators=[MinValueValidator(0)]
     )
     description = models.TextField('Текст заявки')
+    declined = models.BooleanField('Заявка отклонена', default=False)
     created_at = models.DateTimeField('Заказ создан', auto_now_add=True, db_index=True)
     take_at = models.DateTimeField('Взят в работу', null=True, blank=True, db_index=True)
     estimated_time = models.DateTimeField('Срок выполнения заказа', null=True, blank=True, db_index=True)
