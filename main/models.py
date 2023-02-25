@@ -16,9 +16,18 @@ class Person(models.Model):
     def __str__(self):
         return f'{self.name} ({self.phone})'
 
+    def user_name(self):
+        return self.name
+
+    def user_phone(self):
+        return self.phone
+
+    def user_id(self):
+        return self.telegram_id
+
 
 class Client(models.Model):
-    person = models.ForeignKey(
+    person = models.OneToOneField(
         Person,
         verbose_name='Заказчик',
         related_name='clients',
@@ -37,7 +46,7 @@ class Client(models.Model):
 
 
 class Owner(models.Model):
-    person = models.ForeignKey(
+    person = models.OneToOneField(
         Person,
         verbose_name='Администратор',
         related_name='owners',
@@ -53,7 +62,7 @@ class Owner(models.Model):
 
 
 class Contractor(models.Model):
-    person = models.ForeignKey(
+    person = models.OneToOneField(
         Person,
         verbose_name='Подрядчик',
         related_name='contractors',
@@ -69,7 +78,7 @@ class Contractor(models.Model):
 
 
 class Manager(models.Model):
-    person = models.ForeignKey(
+    person = models.OneToOneField(
         Person,
         verbose_name='менеджер',
         related_name='managers',
