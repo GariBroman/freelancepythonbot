@@ -88,10 +88,8 @@ class Manager(models.Model):
 class Tariff(models.Model):
     title = models.CharField('Название тарифа', max_length=20, unique=True)
     orders_limit = models.IntegerField('Лимит заявок в месяц')
-    price = models.DecimalField(
+    price = models.IntegerField(
         'стоимость подписки',
-        max_digits=8,
-        decimal_places=2,
         validators=[MinValueValidator(0)]
     )
     validity = models.DurationField('Срок действия', default=timedelta(days=30))
@@ -188,10 +186,8 @@ class Order(models.Model):  # TODO проверить почему нет Client
         null=True,
         blank=True
     )
-    salary = models.DecimalField(
+    salary = models.IntegerField(
         'стоимость работ',
-        max_digits=8,
-        decimal_places=2,
         default=300,
         validators=[MinValueValidator(0)]
     )
