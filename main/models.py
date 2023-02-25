@@ -86,7 +86,7 @@ class Manager(models.Model):
 
 
 class Tariff(models.Model):
-    title = models.CharField('Название тарифа', max_length=20)
+    title = models.CharField('Название тарифа', max_length=20, unique=True)
     orders_limit = models.IntegerField('Лимит заявок в месяц')
     price = models.DecimalField(
         'стоимость подписки',
@@ -160,6 +160,7 @@ class ClientSubscription(models.Model):
         on_delete=models.PROTECT
     )
     started_at = models.DateTimeField('Старт подписки', auto_now_add=True)
+    payment_id = models.CharField(max_length=50, blank=True)
     
     class Meta:
         verbose_name = 'договор клиента'
