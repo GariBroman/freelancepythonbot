@@ -36,6 +36,19 @@ class Client(models.Model):
     def is_new_request_available(self):
         return self.subscriptions.last().orders_left() > 0
 
+    def get_current_orders(self):
+        orders = self.orders.all().order_by('created_at')
+        serialize_order = []
+        for order in orders:
+            serialize_order.append(
+                {
+                    'id': order.id,
+                    'description': order.description,
+                    'created at': order.created_at.strftime('%Y-%m-%d'),
+                }
+            )
+
+        return serialize_order
 
 class Owner(models.Model):
     person = models.OneToOneField(
