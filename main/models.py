@@ -188,7 +188,7 @@ class Order(models.Model):  # TODO проверить почему нет Client
     )
     salary = models.IntegerField(
         'стоимость работ',
-        default=300,
+        default=20,
         validators=[MinValueValidator(0)]
     )
     description = models.TextField('Текст заявки')
