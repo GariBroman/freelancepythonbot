@@ -263,7 +263,7 @@ def activate_subscription(redis: Redis, update: Update, context: CallbackContext
         provider_token=os.getenv('YOOKASSA_TOKEN'),
         currency='RUB',
         prices=[
-            LabeledPrice(label='RUB', amount=tariff.int_price())
+            LabeledPrice(label='RUB', amount=(tariff.price * 100))
         ]
     )
     return 'SUBSCRIPTION'
