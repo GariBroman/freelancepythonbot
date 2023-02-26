@@ -20,6 +20,8 @@ NEW_CLIENT = {'text': 'Стать клиентом', 'callback_data': 'new_clien
 
 NEW_REQUEST = {'text': 'Отправить заявку', 'callback_data': 'new_request'}
 
+ORDER = {'text': 'Заказ', 'callback_data': 'show_order'}
+
 ORDER_COMMENT = {'text': 'Отправить уточнение', 'callback_data': 'new_request'}
 
 PHONENUMBER_REQUEST = 'Поделиться номером'

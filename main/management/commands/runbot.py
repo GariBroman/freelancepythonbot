@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from django.core.management.base import BaseCommand
 from environs import Env
+from more_itertools import chunked
 from phonenumber_field.validators import (
     validate_international_phonenumber,
     ValidationError
@@ -274,10 +275,11 @@ def display_current_orders(update: Update, context: CallbackContext) -> str:
     message = 'Ваши заказы:'
     for num, order in enumerate(orders, start=1):
         message += f'\n\nЗаказ {num}.\n{order["created_at"]}: {order["description"][:50]}...'
-        orders_buttons.append([InlineKeyboardButton(
-            text=f'Заказ {num}',
-            callback_data=f'show_order:::{order["id"]}'
-        )])
+        orders_buttons.append(InlineKeyboardButton(
+            text=f'{buttons.ORDER["text"]} {num}',
+            callback_data=f'{buttons.ORDER["callback_data"]}:::{order["id"]}'
+        ))
+    orders_buttons = list(chunked(orders_buttons, 3))
     orders_buttons.append([InlineKeyboardButton(**buttons.BACK_TO_CLIENT_MAIN)])
     context.bot.send_message(
         update.effective_chat.id,
