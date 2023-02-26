@@ -1,5 +1,5 @@
 from textwrap import dedent
-
+from typing import Any
 import main.models
 from main import models as main_models
 from django.db.models import QuerySet
@@ -43,31 +43,6 @@ def is_contractor(telegram_id: int) -> bool:
         return True
     except main_models.Contractor.DoesNotExist:
         return False
-
-def check_role(telegram_id: int, claimed_role: str) -> bool:
-    try:
-        person = main_models.Person.objects.get(telegram_id=telegram_id)
-        
-        with suppress((#main_models.Person.contractors.RelatedObjectDoesNotExist,
-                       main_models.Person.owners.RelatedObjectDoesNotExist,
-                       main_models.Person.clients.RelatedObjectDoesNotExist,
-                       main_models.Person.managers.RelatedObjectDoesNotExist)):
-            if person.owners:
-                print(person.owners)
-                return 'admin'
-            if person.managers:
-                print(person.owners)
-                return 'manager'
-            if person.contractors:
-                print('fuck', person.contractors)
-                return 'contractor'
-            if person.clients:
-                print(person.clients)
-                return 'client'
-
-    except main_models.Person.DoesNotExist:
-        if claimed_role == 'client':
-            return 'visitor'
 
 
 def create_person(telegram_id: int,
@@ -218,3 +193,24 @@ def create_client_order_complaint(order_id: int, complaint: str) -> None:
         order=order,
         complaint=complaint
     )
+
+
+def get_contractor_current_orders(telegram_id: str) -> list[dict[str, Any], ...]:
+    contractor = get_contractor(telegram_id=telegram_id)
+    orders = main_models.Order.objects.filter(contractor=contractor).filter(finished_at__isnull=True). \
+        filter(declined=False).order_by('created_at')
+    current_orders = [
+        {'id': order.id, 'display': order.short_display()} for order in orders
+    ]
+    print(current_orders)
+    return current_orders
+
+
+def get_contractor_available_orders(telegram_id: str) -> list[dict[str, Any], ...]:
+    orders = main_models.Order.objects.all().order_by('created_at')
+    available_orders = [
+        {'id': order.id, 'display': order.short_display()} for order in orders if order.is_available_order()
+    ]
+    print(available_orders)
+    return available_orders
+

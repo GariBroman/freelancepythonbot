@@ -254,8 +254,15 @@ class Order(models.Model):
         contractor = self.contractor.person.name if self.contractor else ''
         return f'[{self.subscription.client.person.name}] {self.description[:50]} -> {contractor}'
 
+    def is_available_order(self):
+        if not self.declined and not self.contractor and not self.take_at:
+            return True
+
     def is_taken_deadline(self):
         return now() > self.created_at + timedelta(self.subscription.tariff.answer_delay)
+
+    def short_display(self):
+        return f'Создан: {self.created_at.strftime("%d.%m.%Y %H:%M")} Задание: {self.description}'
 
     def display(self) -> str:
         #TODO
