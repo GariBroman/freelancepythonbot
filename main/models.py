@@ -252,6 +252,9 @@ class Order(models.Model):
         contractor = self.contractor.person.name if self.contractor else ''
         return f'[{self.subscription.client.person.name}] {self.description[:50]} -> {contractor}'
 
+    def is_taken_deadline(self):
+        return now() > self.created_at + timedelta(self.subscription.tariff.answer_delay)
+
     def display(self) -> str:
         #TODO
         message = dedent(

@@ -356,8 +356,8 @@ def tell_about_subscription(update: Update, context: CallbackContext) -> str:
                 f"""
                 {tariff.title}:
                 {tariff.orders_limit} заявок в месяц.
-                Время ответа на заявку: {tariff.answer_delay}
-                Время ответа на заявку: tariff.display_answer_delay() TODO
+
+                Время ответа на заявку: {tariff.display_answer_delay()}
                 """
         )
         if tariff.personal_contractor_available:
