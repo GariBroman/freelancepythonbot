@@ -72,12 +72,6 @@ def update_client_phone(telegram_id: str,
     main_models.Person.objects.filter(telegram_id=telegram_id).update(phone=phonenumber)
 
 
-def create_request(telegram_id: str,
-                   message: str):
-    ### TODO что имеется ввиду?
-    return
-
-
 def get_tariffs() -> QuerySet:
     return main_models.Tariff.objects.all()
 
@@ -124,7 +118,7 @@ def get_order(telegram_id: str, order_id):
     if order.subscription in client.subscriptions:
         return order
 
-def get_client_subscription_info(telegram_id: int) -> str|None:
+def get_client_subscription_info(telegram_id: int) -> str or None:
     subscription = get_client(telegram_id=telegram_id).subscriptions.last()
     if subscription:
         return subscription.info_subscription()

@@ -103,4 +103,6 @@ class ContractorAdmin(admin.ModelAdmin):
 
 @admin.register(ClientSubscription)
 class ClientSubscriptionAdmin(admin.ModelAdmin):
-    pass
+    inlines = [
+        OrderSubscriptionInline
+    ]
