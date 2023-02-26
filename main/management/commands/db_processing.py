@@ -226,17 +226,19 @@ def get_contractor_available_orders(telegram_id: str) -> list[dict[str, Any], ..
     return available_orders
 
 
-def display_contractor_salary(telegram_id: str) -> str:  # TODO сделать за текущий месяц
+def display_contractor_salary(telegram_id: str) -> str:
     contractor = get_contractor(telegram_id=telegram_id)
-    start_period, end_period = fetch_start_end_of_month()
-    # filter_args = {'contractor': contractor, 'finished_at__gte': start_period, 'finished_at__lt': end_period}
-    orders = main_models.Order.objects.filter(
-        contractor=contractor).annotate(total_salary=F('salary')).first()
-        # finished_at__gte=start_period,finished_at__lt=end_period
-    # print(orders)
-    # print(f'Всего вы выполнили заказов на {orders.total_salary} руб.')
 
-    return f'Всего вы выполнили заказов на {orders.total_salary} руб.'
+    start_period, end_period = fetch_start_end_of_month()
+    filter_args = {
+        'contractor': contractor,
+        'finished_at__isnull': False,
+        'finished_at__gte': start_period,
+        'finished_at__lt': end_period
+    }
+    query = contractor.orders.filter(**filter_args).aggregate(Sum('salary'))
+
+    return f'Всего вы выполнили заказов на {query["salary__sum"]} руб.'
 
 
 def display_order_info(order_id: int) -> str:
