@@ -274,7 +274,7 @@ class Order(models.Model):
 class OrderComments(models.Model):
     order = models.ForeignKey(
         Order,
-        verbose_name='Order',
+        verbose_name='комментарий',
         related_name='comments',
         on_delete=models.PROTECT
     )
@@ -296,3 +296,30 @@ class ExampleOrder(models.Model):
 
     def __str__(self):
         return self.text
+
+
+class Complaint(models.Model):
+    Order = models.ForeignKey(
+        Order,
+        verbose_name='жалоба',
+        related_name='complaints',
+        on_delete=models.PROTECT
+    )
+    admin = models.ForeignKey(
+        Owner,
+        verbose_name='админ',
+        related_name='complaints',
+        on_delete=models.PROTECT,
+        blank=True
+    )
+    manager = models.ForeignKey(
+        Manager,
+        verbose_name='менеджер',
+        related_name='complaints',
+        on_delete=models.PROTECT,
+        blank=True
+    )
+    complaint = models.TextField('Текст жалобы', blank=True)
+    answer = models.TextField('Ответ на жалобу', blank=True)
+    created_at = models.DateTimeField('Жалоба подана', auto_now_add=True, db_index=True)
+    closed_at = models.DateTimeField('Жалоба закрыта', db_index=True)

@@ -1,4 +1,6 @@
 from textwrap import dedent
+
+import main.models
 from main import models as main_models
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
@@ -173,3 +175,10 @@ def get_order_contractor_contact(order_id: str) -> dict:
         'phone_number': order.contractor.person.phone,
         'user_id': order.contractor.person.telegram_id
     }
+
+def create_client_order_complaint(order_id: int, complaint: str) -> None:
+    order = main_models.Order.objects.get(id=order_id)
+    main_models.Complaint.objects.create(
+        order=order,
+        complaint=complaint
+    )
