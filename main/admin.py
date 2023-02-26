@@ -1,7 +1,9 @@
 from django.contrib import admin
 from django import forms
+from django.db.models import Sum
 from django.db import models
 from django.forms import Textarea
+from django.utils import timezone
 from main.models import (
     Order, 
     ExampleOrder, 
@@ -15,6 +17,7 @@ from main.models import (
     Person,
     Complaint
 )
+
 
 import nested_admin
 
@@ -95,6 +98,17 @@ class OrderAdmin(admin.ModelAdmin):
     @admin.display(ordering='subscription__client', description='client')
     def get_client(self, obj):
         return obj.subscription.client
+    actions = ['get_monthly_salaries']  
+
+    @admin.action(description='Get monthly salaries')
+    def get_monthly_salaries(modeladmin, request, queryset):
+        payments = queryset.filter(finished_at__gte=timezone.now() - timezone.timedelta(days=30)) \
+            .select_related('contractor__person').values('contractor__person__telegram_id').annotate(total_salary=Sum('salary'))
+        print(payments)
+        with open("example.txt", "w") as f:
+            f.write(str(payments))
+        return payments    
+
 
 @admin.register(Person)
 class PersonAdmin(admin.ModelAdmin):
