@@ -12,7 +12,8 @@ from main.models import (
     Contractor, 
     Owner, 
     Manager, 
-    Person
+    Person,
+    Complaint
 )
 
 import nested_admin
@@ -20,7 +21,10 @@ import nested_admin
 
 class OrderCommentsInline(admin.TabularInline):
     model = OrderComments
-    fields = ('created_at', 'comment')
+    fields = ('author', 'comment', 'created_at')
+    formfield_overrides = {
+        models.TextField: {'widget': Textarea(attrs={'rows': 2, 'cols': 60})},
+    }
     readonly_fields = ('created_at',)
     extra = 0
 
@@ -44,9 +48,9 @@ class ClientSubscriptionInline(nested_admin.NestedTabularInline):
     ]
 
 
-class OrderContractorInline(admin.TabularInline):
+class OrderContractorInline(admin.StackedInline):
     fk_name = 'contractor'
-    fields = ('subscription', 'description')
+    fields = ('subscription', 'description', 'finished_at')
     formfield_overrides = {
         models.TextField: {'widget': Textarea(attrs={'rows':2, 'cols':40})},
     }
@@ -69,13 +73,20 @@ class ExampleOrderAdmin(admin.ModelAdmin):
 
 @admin.register(Tariff)
 class TariffAdmin(admin.ModelAdmin):
-    pass
+    list_display = (
+        'title', 
+        'orders_limit', 
+        'price',  
+        'contractor_contacts_availability', 
+        'personal_contractor_available'
+    )
 
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', )
-
+    list_display = ('__str__', 'contractor', 'created_at', 'take_at', 'estimated_time', 'declined')
+    search_fields = ('contractor__person__name', 'subscription__client__person__name')
     inlines = [
         OrderCommentsInline
     ]
@@ -83,7 +94,8 @@ class OrderAdmin(admin.ModelAdmin):
 
 @admin.register(Person)
 class PersonAdmin(admin.ModelAdmin):
-    pass
+    search_fields = ('name', 'phone', 'telegram_id')
+    list_display = ('name', 'telegram_id', 'phone')
 
 
 @admin.register(Client)
@@ -91,7 +103,13 @@ class ClientAdmin(nested_admin.NestedModelAdmin):
     inlines = [
         ClientSubscriptionInline,
     ]
+    list_display = ('__str__', 'get_telegram_id')
+    search_fields = ('person__name', 'person__phone', 'person__telegram_id')
 
+    @admin.display(ordering='person__telegram_id', description='telegram_id')
+    def get_telegram_id(self, obj):
+        return obj.person.telegram_id
+    
 
 @admin.register(Owner)
 class OwnerAdmin(admin.ModelAdmin):
@@ -100,7 +118,12 @@ class OwnerAdmin(admin.ModelAdmin):
 
 @admin.register(Manager)
 class ManagerAdmin(admin.ModelAdmin):
-    pass
+    list_display = ('__str__', 'get_telegram_id', 'active')
+    search_fields = ('person__name', 'person__phone', 'person__telegram_id')
+
+    @admin.display(ordering='person__telegram_id', description='telegram_id')
+    def get_telegram_id(self, obj):
+        return obj.person.telegram_id
 
 
 @admin.register(Contractor)
@@ -108,6 +131,12 @@ class ContractorAdmin(admin.ModelAdmin):
     inlines = [
         OrderContractorInline
     ]
+    list_display = ('__str__', 'get_telegram_id', 'active')
+    search_fields = ('person__name', 'person__phone', 'person__telegram_id')
+
+    @admin.display(ordering='person__telegram_id', description='telegram_id')
+    def get_telegram_id(self, obj):
+        return obj.person.telegram_id
 
 
 @admin.register(ClientSubscription)
@@ -115,3 +144,12 @@ class ClientSubscriptionAdmin(admin.ModelAdmin):
     inlines = [
         OrderSubscriptionInline
     ]
+    list_display = ('client', 'orders_left', 'tariff', 'contractor')
+    search_fields = ('client__person__name', 'contractor__person__name')
+
+
+@admin.register(Complaint)
+class ComplaintAdmin(admin.ModelAdmin):
+    list_display = ('order', 'complaint', 'created_at', 'closed_at')
+    search_fields = ('order', )
+    list_filter = ('created_at', )
