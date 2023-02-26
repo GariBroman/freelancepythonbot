@@ -96,6 +96,8 @@ SUBSCRIPTION_ALERT = dedent(
     """
 )
 
+SUCCESS_COMMENT = 'Ваш комментарий отправлен'
+
 SUCCESS_REQUEST = dedent(
     f'''
     Заявка отправлена!

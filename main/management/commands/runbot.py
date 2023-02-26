@@ -258,10 +258,6 @@ def client_request_description(update: Update, context: CallbackContext) -> str:
     return hello_client(update=update, context=context)
 
 
-
-
-
-
 @delete_prev_inline
 def display_current_orders(update: Update, context: CallbackContext) -> str:
     orders = db.get_current_client_orders(telegram_id=update.effective_chat.id)
@@ -310,13 +306,38 @@ def display_order(update: Update, context: CallbackContext) -> str:
 
 
 @delete_prev_inline
-def add_order_comment(update: Update, context: CallbackContext) -> str:
+def add_order_comment(redis: Redis, update: Update, context: CallbackContext) -> str:
+    _, order_id = update.callback_query.data.split(':::')
+    redis.set(f'{update.effective_chat.id}_order+id', order_id)
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.NEW_CLIENT_COMMENT,
         reply_markup=CANCEL_INLINE
     )
     return 'CLIENT_NEW_COMMENT'
+
+@delete_prev_inline
+def client_comment_description(redis: Redis, update: Update, context: CallbackContext) -> str:
+    if len(update.message.text) > 1000:
+        context.bot.send_message(
+            update.effective_chat.id,
+            text=messages.TOO_MUCH_REQUEST_SYMBOLS,
+            reply_markup=CANCEL_INLINE
+        )
+        return 'CLIENT_NEW_COMMENT'
+    order_id = redis.get(f'{update.effective_chat.id}_order+id')
+    db.create_comment_from_client(
+        order_id=order_id,
+        comment=update.message.text
+    )
+
+    context.bot.send_message(
+        update.effective_chat.id,
+        messages.SUCCESS_COMMENT
+    )
+    redis.delete(f'{update.effective_chat.id}_order+id')
+    sleep(2)
+    return hello_client(update=update, context=context)
 
 
 @delete_prev_inline
@@ -333,7 +354,7 @@ def send_contractor_contact(update: Update, context: CallbackContext) -> str:
             update.effective_chat.id,
             text=error.message
         )
-        sleep(2)
+    sleep(2)
     return display_order(update=update, context=context)
 
 
@@ -527,7 +548,7 @@ class Command(BaseCommand):
                         CallbackQueryHandler(new_request, pattern=buttons.NEW_REQUEST['callback_data']),
                         CallbackQueryHandler(display_current_orders, pattern=buttons.CLIENT_CURRENT_ORDERS['callback_data']),
                         CallbackQueryHandler(display_order, pattern=buttons.ORDER['callback_data']),
-                        CallbackQueryHandler(add_order_comment, pattern=buttons.ORDER_COMMENT['callback_data']),
+                        CallbackQueryHandler(partial(add_order_comment, redis), pattern=buttons.ORDER_COMMENT['callback_data']),
                         CallbackQueryHandler(send_contractor_contact, pattern=buttons.CONTRACTOR_CONTACTS['callback_data']),
                         CallbackQueryHandler(send_current_tariff, pattern=buttons.CLIENT_CURRENT_TARIFF['callback_data']),
                         CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
@@ -541,7 +562,7 @@ class Command(BaseCommand):
 
                     ],
                     'CLIENT_NEW_COMMENT': [
-                        MessageHandler(filters=Filters.text, callback=client_request_description),
+                        MessageHandler(filters=Filters.text, callback=partial(client_comment_description, redis)),
                         CallbackQueryHandler(hello_client, pattern=buttons.CANCEL['callback_data']),
 
                     ],
