@@ -17,6 +17,8 @@ ASK_PHONENUMBER = dedent(
 
 CLIENT_MAIN = 'Вы на главной странице заказчика'
 
+CONTRACTOR_NOT_FOUND = 'Исполнитель на ваш заказ еще не назначен.'
+
 DESCRIBE_REQUEST = dedent(
     """
     Опишите тезисно вашу проблему.

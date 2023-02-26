@@ -5,6 +5,15 @@ from django.shortcuts import get_object_or_404
 from django.http.response import Http404
 from contextlib import suppress
 
+import main.management.commands.messages as messages
+
+class EntityNotFoundError(Exception):
+    def __init__(self, message: str = 'Сущность не найдена'):
+        self.message = message
+
+    def __str__(self):
+        return self.message 
+
 
 def get_role(telegram_id):
     try:
@@ -157,6 +166,8 @@ def create_comment_from_contractor(order_id, comment: str):
 
 def get_order_contractor_contact(order_id: str) -> dict:
     order = main_models.Order.objects.get(id=order_id)
+    if not order.contractor:
+        raise EntityNotFoundError(messages.CONTRACTOR_NOT_FOUND)
     return {
         'first_name': order.contractor.person.name,
         'phone_number': order.contractor.person.phone,

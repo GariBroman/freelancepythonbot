@@ -300,6 +300,7 @@ def display_order(update: Update, context: CallbackContext) -> str:
                 callback_data=f'{buttons.CONTRACTOR_CONTACTS["callback_data"]}:::{order_id}'
             )
         ])
+    order_buttons.append([InlineKeyboardButton(**buttons.BACK_TO_CLIENT_MAIN)])
     context.bot.send_message(
         update.effective_chat.id,
         text=order.display(),
@@ -321,11 +322,18 @@ def add_order_comment(update: Update, context: CallbackContext) -> str:
 @delete_prev_inline
 def send_contractor_contact(update: Update, context: CallbackContext) -> str:
     _, order_id = update.callback_query.data.split(':::')
-    contractor_contact_meta = db.get_order_contractor_contact(order_id=order_id)
-    context.bot.send_contact(
-        chat_id=update.effective_chat.id,
-        contact=Contact(**contractor_contact_meta),
-    )
+    try:
+        contractor_contact_meta = db.get_order_contractor_contact(order_id=order_id)
+        context.bot.send_contact(
+            chat_id=update.effective_chat.id,
+            contact=Contact(**contractor_contact_meta),
+        )
+    except db.EntityNotFoundError as error:
+        context.bot.send_message(
+            update.effective_chat.id,
+            text=error.message
+        )
+        sleep(2)
     return display_order(update=update, context=context)
 
 
