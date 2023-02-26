@@ -272,19 +272,24 @@ class Order(models.Model):
 
 
 class OrderComments(models.Model):
+    AUTHOR = (
+        ('client', 'Клиент'),
+        ('contactor', 'Подрядчик'),
+        ('owner', 'Администратор'),
+        ('manager', 'Менеджер'),
+    )
     order = models.ForeignKey(
         Order,
         verbose_name='комментарий',
         related_name='comments',
         on_delete=models.PROTECT
     )
-    from_client = models.BooleanField('Комментарий клиента', default=False)
-    from_contractor = models.BooleanField('Комментарий клиента', default=False)
+    author = models.CharField('Автор комментария', max_length=10, choices=AUTHOR, null=True, blank=True)
     comment = models.TextField('Comment', blank=True)
     created_at = models.DateTimeField('Created at', auto_now_add=True)
     
     def __str__(self):
-        return f'{self.comment[:100]}...'
+        return f'[{self.author}] {self.comment[:100]}...'
 
 
 class ExampleOrder(models.Model):
@@ -310,6 +315,7 @@ class Complaint(models.Model):
         verbose_name='админ',
         related_name='complaints',
         on_delete=models.PROTECT,
+        null=True,
         blank=True
     )
     manager = models.ForeignKey(
@@ -317,6 +323,7 @@ class Complaint(models.Model):
         verbose_name='менеджер',
         related_name='complaints',
         on_delete=models.PROTECT,
+        null=True,
         blank=True
     )
     complaint = models.TextField('Текст жалобы', blank=True)

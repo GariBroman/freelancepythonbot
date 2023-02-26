@@ -153,7 +153,7 @@ def create_comment_from_client(order_id, comment: str):
     order = main_models.Order.objects.get(id=order_id)
     main_models.OrderComments.objects.create(
         order=order,
-        from_client=True,
+        author='client',
         comment=comment
     )
 
@@ -162,7 +162,7 @@ def create_comment_from_contractor(order_id, comment: str):
     order = main_models.Order.objects.get(id=order_id)
     main_models.OrderComments.objects.create(
         order=order,
-        from_contractor=True,
+        author='contractor',
         comment=comment
     )
 
