@@ -261,7 +261,12 @@ class Order(models.Model):
         return now() > self.created_at + timedelta(self.subscription.tariff.answer_delay)
 
     def short_display(self):
-        return f'Создан: {self.created_at.strftime("%d.%m.%Y %H:%M")} Задание: {self.description}'
+        return dedent(
+            f'''
+            Создан: {self.created_at.strftime("%d.%m.%Y %H:%M")}
+            Задание: {self.description}
+            '''
+        )
 
     def display(self) -> str:
         # TODO
