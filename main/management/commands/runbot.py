@@ -499,7 +499,7 @@ def new_contractor_message(update: Update, context: CallbackContext) -> str:
 def hello_contractor(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
-        text=messages.CONTRACTOR_MAIN
+        text=messages.CONTRACTOR_MAIN,
         reply_markup=CONTRACTOR_INLINE_KEYBOARD
     )
     return 'CONTRACTOR'
