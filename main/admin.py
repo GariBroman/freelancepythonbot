@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django import forms
+from django.db import models
+from django.forms import Textarea
 from main.models import (
     Order, 
     ExampleOrder, 
@@ -26,6 +28,9 @@ class OrderCommentsInline(admin.TabularInline):
 class OrderSubscriptionInline(nested_admin.NestedTabularInline):
     fk_name = 'subscription'
     fields = ('contractor', 'description')
+    formfield_overrides = {
+        models.TextField: {'widget': Textarea(attrs={'rows': 2, 'cols': 60})},
+    }
     model = Order
     extra = 0
 
@@ -42,6 +47,9 @@ class ClientSubscriptionInline(nested_admin.NestedTabularInline):
 class OrderContractorInline(admin.TabularInline):
     fk_name = 'contractor'
     fields = ('subscription', 'description')
+    formfield_overrides = {
+        models.TextField: {'widget': Textarea(attrs={'rows':2, 'cols':40})},
+    }
     model = Order
     extra = 0
 
@@ -67,6 +75,7 @@ class TariffAdmin(admin.ModelAdmin):
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', )
+
     inlines = [
         OrderCommentsInline
     ]
