@@ -260,7 +260,7 @@ def close_order(order_id: int) -> None: # TODO return ссылка на зака
 
 
 def get_managers_telegram_ids() -> tuple[str]:
-    managers = main_models.Manager.object.filter(active=True)
+    managers = main_models.Manager.objects.filter(active=True)
 
     return tuple(str(manager.person.telegram_id) for manager in managers)
 
