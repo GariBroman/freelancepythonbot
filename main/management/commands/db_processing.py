@@ -246,5 +246,6 @@ def display_order_info(order_id: int) -> str:
 
 
 def set_estimate_datetime(order_id: int, estimate_datetime: datetime) -> None:
-    main_models.Order.objects.get(id=order_id).update(estimated_time=estimate_datetime)
-
+    order = main_models.Order.objects.get(id=order_id)
+    order.estimated_time=estimate_datetime
+    order.save()
