@@ -22,6 +22,6 @@ NEW_REQUEST = {'text': 'Отправить заявку', 'callback_data': 'new_
 
 ORDER = {'text': 'Заказ', 'callback_data': 'show_order'}
 
-ORDER_COMMENT = {'text': 'Отправить уточнение', 'callback_data': 'new_request'}
+ORDER_COMMENT = {'text': 'Отправить уточнение', 'callback_data': 'new_order_comment'}
 
 PHONENUMBER_REQUEST = 'Поделиться номером'

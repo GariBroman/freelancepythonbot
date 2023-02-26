@@ -122,7 +122,7 @@ def get_order(telegram_id: str, order_id):
     client = main_models.Client.objects.get(person__telegram_id=telegram_id)
     order = main_models.Order.objects.get(id=order_id)
 
-    if order.subscription in client.subscriptions:
+    if order.subscription in client.subscriptions.all():
         return order
 
 
@@ -136,22 +136,6 @@ def can_see_contractor_contacts(telegram_id: int) -> bool:
     subscription = get_client(telegram_id=telegram_id).subscriptions.last()
     if subscription:
         return subscription.tariff.contractor_contacts_availability
-
-
-def get_contractor_contacts(order_id) -> str:
-    order = main_models.Order.objects.get(id=order_id)
-    if order.subscription.tariff.contractor_contacts_availability:
-        return dedent(
-            f"""
-            Вашим заказом занимается:
-            
-            Подрядчик: {order.contractor}
-            Телеграм: @{order.contractor.person.telegram_id}
-            Телефон: {order.contractor.person.phone}
-            """
-        )
-    else:
-        return 'Запрос контактов ограничен тарифным планом.'
 
 
 def create_comment_from_client(order_id, comment: str):
@@ -170,3 +154,11 @@ def create_comment_from_contractor(order_id, comment: str):
         from_contractor=True,
         comment=comment
     )
+
+def get_order_contractor_contact(order_id: str) -> dict:
+    order = main_models.Order.objects.get(id=order_id)
+    return {
+        'first_name': order.contractor.person.name,
+        'phone_number': order.contractor.person.phone,
+        'user_id': order.contractor.person.telegram_id
+    }

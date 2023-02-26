@@ -264,14 +264,10 @@ class Order(models.Model):
                 {self.description[:50]}...
 
                 Сроки выполнения: {self.estimated_time if self.estimated_time else 'производится оценка...'}
+
+                Статус заявки: {'в работе' if self.contractor else 'Ожидает распределения'}
                 """
         )
-        if self.contractor:
-            message += dedent(
-                """
-                В работе
-                """
-            )
         return message
 
 

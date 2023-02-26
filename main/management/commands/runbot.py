@@ -23,7 +23,8 @@ from telegram import (
     Update,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
-    LabeledPrice
+    LabeledPrice,
+    Contact
 )
 from telegram.error import BadRequest
 from telegram.ext import (
@@ -229,7 +230,7 @@ def new_request(update: Update, context: CallbackContext) -> str:
         text=messages.DESCRIBE_REQUEST,
         reply_markup=CANCEL_INLINE
     )
-    return 'CLIENT'
+    return 'CLIENT_NEW_REQUEST'
 
 
 @delete_prev_inline
@@ -242,7 +243,7 @@ def client_request_description(update: Update, context: CallbackContext) -> str:
             text=messages.TOO_MUCH_REQUEST_SYMBOLS,
             reply_markup=CANCEL_INLINE
         )
-        return 'CLIENT'
+        return 'CLIENT_NEW_REQUEST'
 
     db.create_order(
         telegram_id=update.effective_chat.id,
@@ -257,14 +258,7 @@ def client_request_description(update: Update, context: CallbackContext) -> str:
     return hello_client(update=update, context=context)
 
 
-@delete_prev_inline
-def cancel_new_request(update: Update, context: CallbackContext) -> str:
-    context.bot.send_message(
-        update.effective_chat.id,
-        text='Как скажете',
-        reply_markup=ReplyKeyboardRemove()
-    )
-    return hello_client(update=update, context=context)
+
 
 
 
@@ -296,14 +290,14 @@ def display_order(update: Update, context: CallbackContext) -> str:
     order_buttons = [
         [InlineKeyboardButton(
             text=buttons.ORDER_COMMENT['text'],
-            callback_data=f'{buttons.ORDER_COMMENT["text"]}:::{order_id}'
+            callback_data=f'{buttons.ORDER_COMMENT["callback_data"]}:::{order_id}'
         )]
     ]
     if db.can_see_contractor_contacts(telegram_id=update.effective_chat.id):
         order_buttons.append([
             InlineKeyboardButton(
                 text=buttons.CONTRACTOR_CONTACTS['text'],
-                callback_data=f'{buttons.CONTRACTOR_CONTACTS["text"]}:::{order_id}'
+                callback_data=f'{buttons.CONTRACTOR_CONTACTS["callback_data"]}:::{order_id}'
             )
         ])
     context.bot.send_message(
@@ -312,6 +306,28 @@ def display_order(update: Update, context: CallbackContext) -> str:
         reply_markup=InlineKeyboardMarkup(order_buttons)
     )
     return 'CLIENT'
+
+
+@delete_prev_inline
+def add_order_comment(update: Update, context: CallbackContext) -> str:
+    context.bot.send_message(
+        update.effective_chat.id,
+        text=messages.NEW_CLIENT_COMMENT,
+        reply_markup=CANCEL_INLINE
+    )
+    return 'CLIENT_NEW_COMMENT'
+
+
+@delete_prev_inline
+def send_contractor_contact(update: Update, context: CallbackContext) -> str:
+    _, order_id = update.callback_query.data.split(':::')
+    contractor_contact_meta = db.get_order_contractor_contact(order_id=order_id)
+    context.bot.send_contact(
+        chat_id=update.effective_chat.id,
+        contact=Contact(**contractor_contact_meta),
+    )
+    return display_order(update=update, context=context)
+
 
 @delete_prev_inline
 def send_current_tariff(update: Update, context: CallbackContext) -> str:
@@ -499,17 +515,26 @@ class Command(BaseCommand):
                         MessageHandler(Filters.text, new_contractor_message)
                     ],
                     'CLIENT': [
-                        # CommandHandler('start', check_access),
-                        CallbackQueryHandler(tell_about_subscription, pattern=buttons.CREATE_SUBSCRIPTION['callback_data']),
-                        CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
+                        CommandHandler('start', check_access),
                         CallbackQueryHandler(new_request, pattern=buttons.NEW_REQUEST['callback_data']),
-                        CallbackQueryHandler(cancel_new_request, pattern=buttons.CANCEL['callback_data']),
-                        CallbackQueryHandler(send_current_tariff, pattern=buttons.CLIENT_CURRENT_TARIFF['callback_data']),
                         CallbackQueryHandler(display_current_orders, pattern=buttons.CLIENT_CURRENT_ORDERS['callback_data']),
+                        CallbackQueryHandler(display_order, pattern=buttons.ORDER['callback_data']),
+                        CallbackQueryHandler(add_order_comment, pattern=buttons.ORDER_COMMENT['callback_data']),
+                        CallbackQueryHandler(send_contractor_contact, pattern=buttons.CONTRACTOR_CONTACTS['callback_data']),
+                        CallbackQueryHandler(send_current_tariff, pattern=buttons.CLIENT_CURRENT_TARIFF['callback_data']),
+                        CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
+                        CallbackQueryHandler(hello_client, pattern=buttons.CANCEL['callback_data']),
+                        CallbackQueryHandler(tell_about_subscription, pattern=buttons.CREATE_SUBSCRIPTION['callback_data']),
                         CallbackQueryHandler(hello_client, pattern=buttons.BACK_TO_CLIENT_MAIN['callback_data']),
-                        MessageHandler(filters=Filters.text, callback=client_request_description)
                     ],
-                    'CONTRACTOR': [
+                    'CLIENT_NEW_REQUEST': [
+                        MessageHandler(filters=Filters.text, callback=client_request_description),
+                        CallbackQueryHandler(hello_client, pattern=buttons.CANCEL['callback_data']),
+
+                    ],
+                    'CLIENT_NEW_COMMENT': [
+                        MessageHandler(filters=Filters.text, callback=client_request_description),
+                        CallbackQueryHandler(hello_client, pattern=buttons.CANCEL['callback_data']),
 
                     ],
                     'ADMIN': [
