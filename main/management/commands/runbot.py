@@ -59,14 +59,15 @@ CLIENT_INLINE_KEYBOARD = InlineKeyboardMarkup(
 
 SUBSCRIPTION_KEYBOARD = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton(**buttons.CREATE_SUBSCRIPTION)]
+        [InlineKeyboardButton(**buttons.CREATE_SUBSCRIPTION)],
+        [InlineKeyboardButton(**buttons.BACK_TO_CLIENT_MAIN)]
     ]
 )
 
 CANCEL_INLINE = InlineKeyboardMarkup(
-    [[
-        InlineKeyboardButton(**buttons.CANCEL)
-    ]]
+    [
+        [InlineKeyboardButton(**buttons.CANCEL)]
+    ]
 )
 
 
@@ -112,6 +113,19 @@ def check_subscription(func, *args, **kwargs):
     return wrapper
 
 
+def check_available_request(func, *args, **kwargs):
+    def wrapper(*args, **kwargs):
+        try:
+            update, context = args[-2:]
+        except ValueError:
+            update, context = kwargs['update'], kwargs['context']
+        if db.is_available_request(telegram_id=update.effective_chat.id):
+            return func(*args, **kwargs)
+        else:
+            return available_requests_alert(update=update, context=context)
+    return wrapper
+
+
 def subscription_alert(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
@@ -119,6 +133,15 @@ def subscription_alert(update: Update, context: CallbackContext) -> str:
     )
     sleep(2)
     return tell_about_subscription(update=update, context=context)
+
+
+def available_requests_alert(update: Update, context: CallbackContext) -> str:
+    context.bot.send_message(
+        update.effective_chat.id,
+        text=messages.NO_AVAILABLE_REQUESTS,
+        reply_markup=SUBSCRIPTION_KEYBOARD
+    )
+    return 'CLIENT'
 
 
 def hello_visitor(update: Update, context: CallbackContext) -> str:
@@ -198,14 +221,8 @@ def hello_client(update: Update, context: CallbackContext) -> str:
 
 @delete_prev_inline
 @check_subscription
+@check_available_request
 def new_request(update: Update, context: CallbackContext) -> str:
-    if not db.is_available_request(telegram_id=update.effective_chat.id):
-        context.bot.send_message(
-            update.effective_chat.id,
-            text=messages.NO_AVAILABLE_REQUESTS,
-            reply_markup=SUBSCRIPTION_KEYBOARD
-        )
-        return 'CLIENT'
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.DESCRIBE_REQUEST,
@@ -216,6 +233,7 @@ def new_request(update: Update, context: CallbackContext) -> str:
 
 @delete_prev_inline
 @check_subscription
+@check_available_request
 def client_request_description(update: Update, context: CallbackContext) -> str:
     if len(update.message.text) > 1000:
         context.bot.send_message(
@@ -321,6 +339,7 @@ def new_contractor_message(update: Update, context: CallbackContext) -> str:
             messages.TOO_MUCH_REQUEST_SYMBOLS
         )
         return 'NEW_CONTRACTOR'
+    
     db.create_contractor(
         telegram_id=update.effective_chat.id,
         comment=update.message.text
@@ -478,7 +497,7 @@ class Command(BaseCommand):
                         MessageHandler(Filters.text, new_contractor_message)
                     ],
                     'CLIENT': [
-                        CommandHandler('start', check_access),
+                        # CommandHandler('start', check_access),
                         CallbackQueryHandler(tell_about_subscription, pattern=buttons.CREATE_SUBSCRIPTION['callback_data']),
                         CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
                         CallbackQueryHandler(new_request, pattern=buttons.NEW_REQUEST['callback_data']),
