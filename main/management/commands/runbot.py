@@ -438,8 +438,6 @@ def cancel_new_contractor(update: Update, context: CallbackContext) -> str:
     return 'VISITOR'
 
 
-
-
 class Command(BaseCommand):
     help = "Start Telegram bot"
 
@@ -459,24 +457,28 @@ class Command(BaseCommand):
                 ],
                 states = {
                     'VISITOR': [
+                        CommandHandler('start', check_access),
                         CallbackQueryHandler(new_client, pattern=buttons.NEW_CLIENT['callback_data']),
                         CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
                     ],
                     'VISITOR_PHONENUMBER': [
+                        CommandHandler('start', check_access),
                         MessageHandler(filters=Filters.all, callback=enter_phone),
                     ],
                     'SUBSCRIPTION': [
+                        CommandHandler('start', check_access),
                         CallbackQueryHandler(partial(activate_subscription, redis), pattern='activate_subscription'),
                         CallbackQueryHandler(new_visitor_role, pattern=buttons.CANCEL['callback_data']),
                         PreCheckoutQueryHandler(partial(confirm_payment, redis)),
                         MessageHandler(Filters.successful_payment, hello_client)
                     ],
                     'NEW_CONTRACTOR': [
+                        CommandHandler('start', check_access),
                         CallbackQueryHandler(new_client, pattern=buttons.CANCEL['callback_data']),
                         MessageHandler(Filters.text, new_contractor_message)
                     ],
                     'CLIENT': [
-                        
+                        CommandHandler('start', check_access),
                         CallbackQueryHandler(tell_about_subscription, pattern=buttons.CREATE_SUBSCRIPTION['callback_data']),
                         CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
                         CallbackQueryHandler(new_request, pattern=buttons.NEW_REQUEST['callback_data']),
@@ -484,7 +486,7 @@ class Command(BaseCommand):
                         CallbackQueryHandler(send_current_tariff, pattern=buttons.CLIENT_CURRENT_TARIFF['callback_data']),
                         CallbackQueryHandler(display_current_orders, pattern=buttons.CLIENT_CURRENT_ORDERS['callback_data']),
                         CallbackQueryHandler(hello_client, pattern=buttons.BACK_TO_CLIENT_MAIN['callback_data']),
-                        MessageHandler(filters=Filters.all, callback=client_request_description)
+                        MessageHandler(filters=Filters.text, callback=client_request_description)
                     ],
                     'CONTRACTOR': [
 
@@ -493,9 +495,8 @@ class Command(BaseCommand):
 
                     ]
                 },
-                fallbacks = [
+                fallbacks = [],
 
-                ]
             )
         )
         
