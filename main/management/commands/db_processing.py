@@ -9,6 +9,7 @@ from contextlib import suppress
 
 import main.management.commands.messages as messages
 
+
 class EntityNotFoundError(Exception):
     def __init__(self, message: str = 'Сущность не найдена'):
         self.message = message
@@ -23,14 +24,14 @@ def get_role(telegram_id):
         with suppress((main_models.Person.contractors.RelatedObjectDoesNotExist,
                        main_models.Person.owners.RelatedObjectDoesNotExist,
                        main_models.Person.managers.RelatedObjectDoesNotExist)):
-            if person.clients:
-                return 'client'
-            elif person.contractors:
-                return 'contractor'
-            elif person.owners:
-                return 'owner'
+            if person.owners:
+                return 'admin'
             elif person.managers:
                 return 'manager'
+            elif person.contractors:
+                return 'contractor'
+            elif person.clients:
+                return 'client'
 
     except Http404:
         return 'visitor'
@@ -165,6 +166,7 @@ def create_comment_from_contractor(order_id, comment: str):
         author='contractor',
         comment=comment
     )
+
 
 def get_order_contractor_contact(order_id: str) -> dict:
     order = main_models.Order.objects.get(id=order_id)
