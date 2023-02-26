@@ -85,12 +85,16 @@ class TariffAdmin(admin.ModelAdmin):
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at', )
-    list_display = ('__str__', 'contractor', 'created_at', 'take_at', 'estimated_time', 'declined')
+    list_display = ('get_client', 'contractor', 'created_at', 'take_at', 'estimated_time', 'declined')
     search_fields = ('contractor__person__name', 'subscription__client__person__name')
     inlines = [
         OrderCommentsInline
     ]
-
+    list_filter = ('created_at', 'finished_at', 'declined', 'contractor')
+    
+    @admin.display(ordering='subscription__client', description='client')
+    def get_client(self, obj):
+        return obj.subscription.client
 
 @admin.register(Person)
 class PersonAdmin(admin.ModelAdmin):
