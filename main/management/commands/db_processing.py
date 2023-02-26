@@ -1,11 +1,6 @@
-from textwrap import dedent
 from typing import Any
-import main.models
 from main import models as main_models
-from django.db.models import QuerySet
-from django.shortcuts import get_object_or_404
-from django.http.response import Http404
-from contextlib import suppress
+from django.db.models import QuerySet, F
 
 import main.management.commands.messages as messages
 
@@ -202,7 +197,6 @@ def get_contractor_current_orders(telegram_id: str) -> list[dict[str, Any], ...]
     current_orders = [
         {'id': order.id, 'display': order.short_display()} for order in orders
     ]
-    print(current_orders)
     return current_orders
 
 
@@ -211,6 +205,19 @@ def get_contractor_available_orders(telegram_id: str) -> list[dict[str, Any], ..
     available_orders = [
         {'id': order.id, 'display': order.short_display()} for order in orders if order.is_available_order()
     ]
-    print(available_orders)
     return available_orders
+
+
+def display_contractor_salary(telegram_id: str) -> str: # TODO сделать за текущий месяц
+    contractor = get_contractor(telegram_id=telegram_id)
+
+    orders = main_models.Order.objects.filter(contractor=contractor).annotate(total_salary=F('salary')).first()
+
+    return f'Всего вы выполнили заказов на {orders.total_salary} руб.'
+
+
+def display_order_info(order_id: int) -> str:
+    order = main_models.Order.objects.get(id=order_id)
+
+    return order.display()
 
