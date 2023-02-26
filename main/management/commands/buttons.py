@@ -6,6 +6,7 @@ CANCEL = {'text': "Я передумал", 'callback_data': 'cancel'}
 
 CONTRACTOR_CONTACTS = {'text': "Показать контакты подрядчика", "callback_data": 'send_contractor_contacts'}
 
+
 CLIENT_CURRENT_ORDERS = {'text': 'Мои текущие заказы', 'callback_data': 'client_current_orders'}
 
 CLIENT_CURRENT_TARIFF = {'text': 'Мой тариф', 'callback_data': 'client_current_tariff'}
@@ -23,5 +24,7 @@ NEW_REQUEST = {'text': 'Отправить заявку', 'callback_data': 'new_
 ORDER = {'text': 'Заказ', 'callback_data': 'show_order'}
 
 ORDER_COMMENT = {'text': 'Отправить уточнение', 'callback_data': 'new_order_comment'}
+
+ORDER_COMPLAINT = {'text': 'Есть претензия', 'callback_data': 'complaint'}
 
 PHONENUMBER_REQUEST = 'Поделиться номером'
