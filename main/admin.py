@@ -31,9 +31,9 @@ class OrderCommentsInline(admin.TabularInline):
 
 class OrderSubscriptionInline(nested_admin.NestedTabularInline):
     fk_name = 'subscription'
-    fields = ('contractor', 'description')
+    fields = [('contractor', 'description'), 'finished_at']
     formfield_overrides = {
-        models.TextField: {'widget': Textarea(attrs={'rows': 2, 'cols': 60})},
+        models.TextField: {'widget': Textarea(attrs={'rows': 2, 'cols': 50})},
     }
     model = Order
     extra = 0
@@ -50,7 +50,7 @@ class ClientSubscriptionInline(nested_admin.NestedTabularInline):
 
 class OrderContractorInline(admin.StackedInline):
     fk_name = 'contractor'
-    fields = ('subscription', 'description', 'finished_at')
+    fields = (('subscription', 'description', 'salary'), ('take_at', 'finished_at'))
     formfield_overrides = {
         models.TextField: {'widget': Textarea(attrs={'rows':2, 'cols':40})},
     }
@@ -90,7 +90,7 @@ class OrderAdmin(admin.ModelAdmin):
     inlines = [
         OrderCommentsInline
     ]
-    list_filter = ('created_at', 'finished_at', 'declined', 'contractor')
+    list_filter = ('created_at', 'finished_at', 'estimated_time', 'declined', 'contractor', 'subscription__client')
     
     @admin.display(ordering='subscription__client', description='client')
     def get_client(self, obj):
