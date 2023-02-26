@@ -42,6 +42,17 @@ import main.management.commands.db_processing as db
 import main.management.commands.messages as messages
 import main.management.commands.buttons as buttons
 
+
+START_INLINE = InlineKeyboardMarkup(
+    [
+        [InlineKeyboardButton(**buttons.I_AM_CLIENT)],
+        [InlineKeyboardButton(**buttons.I_AM_CONTACTOR)],
+        [InlineKeyboardButton(**buttons.I_AM_MANAGER)],
+        [InlineKeyboardButton(**buttons.I_AM_OWNER)],
+    ]
+)
+
+
 VISITOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
     [
         [InlineKeyboardButton(**buttons.NEW_CLIENT)],
@@ -59,6 +70,12 @@ CLIENT_INLINE_KEYBOARD = InlineKeyboardMarkup(
     ]
 )
 
+CONTRACTOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
+    [
+        [InlineKeyboardButton]
+    ]
+)
+
 SUBSCRIPTION_KEYBOARD = InlineKeyboardMarkup(
     [
         [InlineKeyboardButton(**buttons.CREATE_SUBSCRIPTION)],
@@ -71,20 +88,6 @@ CANCEL_INLINE = InlineKeyboardMarkup(
         [InlineKeyboardButton(**buttons.CANCEL)]
     ]
 )
-
-
-def check_access(update: Update, context: CallbackContext) -> str:
-    role = db.get_role(telegram_id=update.effective_chat.id)
-    if role == 'admin':
-        return hello_admin(update=update, context=context)
-    elif role == 'manager':
-        return hello_manager(update=update, context=context)
-    elif role == 'contractor':
-        return hello_contractor(update=update, context=context)
-    elif role == 'client':
-        return hello_client(update=update, context=context)
-    return hello_visitor(update=update, context=context)
-
 
 def delete_prev_inline(func, *args, **kwargs):
     def wrapper(*args, **kwargs):
@@ -126,6 +129,56 @@ def check_available_request(func, *args, **kwargs):
         else:
             return available_requests_alert(update=update, context=context)
     return wrapper
+
+
+def start(update: Update, context: CallbackContext) -> str:
+    if not db.get_person(telegram_id=update.effective_chat.id):
+        return hello_visitor(update=update, context=context)
+    context.bot.send_message(
+        update.effective_chat.id,
+        text=messages.CHECK_ROLE,
+        reply_markup=START_INLINE
+    )
+    return 'VISITOR'
+
+@delete_prev_inline
+def check_access(update: Update, context: CallbackContext) -> str:
+    _, claimed_role = update.callback_query.data.split(":::")
+    
+    if claimed_role == 'admin':
+        if db.is_admin(telegram_id=update.effective_chat.id):
+            return hello_admin(update=update, context=context)
+        else:
+            context.bot.send_message(
+                update.effective_chat.id,
+                text=messages.NOT_ADMIN,
+                reply_markup=START_INLINE
+            )
+    elif claimed_role == 'manager':
+        if db.is_manager(telegram_id=update.effective_chat.id):
+            return hello_manager(update=update, context=context)
+        else:
+            context.bot.send_message(
+                update.effective_chat.id,
+                text=messages.NOT_MANAGER,
+                reply_markup=START_INLINE
+            )
+    elif claimed_role == 'contractor':
+        if db.is_contractor(telegram_id=update.effective_chat.id):
+            return hello_contractor(update=update, context=context)
+        else:
+            context.bot.send_message(
+                update.effective_chat.id,
+                text=messages.NOT_CONTRACTOR,
+                reply_markup=START_INLINE
+            )
+    elif claimed_role == 'client':
+        return new_client(update=update, context=context)
+    return 'VISITOR'
+    
+
+
+
 
 
 def subscription_alert(update: Update, context: CallbackContext) -> str:
@@ -201,7 +254,7 @@ def new_visitor_role(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.NEW_VISITOR_ROLE,
-        reply_markup=VISITOR_INLINE_KEYBOARD
+        reply_markup=START_INLINE
     )
     return 'VISITOR'
 
@@ -437,17 +490,32 @@ def new_contractor_message(update: Update, context: CallbackContext) -> str:
 
 def hello_contractor(update: Update, context: CallbackContext) -> str:
     #TODO
-    return 'CONTRACTOR'
+    context.bot.send_message(
+        update.effective_chat.id,
+        'Поздравляю, вы подрядчик. Но мне пофиг, раздел бота не дописан!',
+        reply_markup=START_INLINE
+    )
+    return 'VISITOR'
 
 
 def hello_admin(update: Update, context: CallbackContext) -> str:
     #TODO
-    return 'CONTRACTOR'
+    context.bot.send_message(
+        update.effective_chat.id,
+        'Поздравляю, вы админ. Но мне пофиг, раздел бота не дописан!',
+        reply_markup=START_INLINE
+    )
+    return 'VISITOR'
 
 
 def hello_manager(update: Update, context: CallbackContext) -> str:
     #TODO
-    return 'CONTRACTOR'
+    context.bot.send_message(
+        update.effective_chat.id,
+        'Поздравляю, вы менеджер. Но мне пофиг, раздел бота не дописан!',
+        reply_markup=START_INLINE
+    )
+    return 'VISITOR'
 
 
 def tell_about_subscription(update: Update, context: CallbackContext) -> str:
@@ -556,32 +624,34 @@ class Command(BaseCommand):
         updater.dispatcher.add_handler(
             ConversationHandler(
                 entry_points = [
-                    CommandHandler('start', check_access)
+                    CommandHandler('start', start)
                 ],
                 states = {
                     'VISITOR': [
-                        CommandHandler('start', check_access),
+                        CommandHandler('start', start),
+                        CallbackQueryHandler(check_access, pattern=buttons.CHECK_ACCESS_CALLBACK),
+
                         CallbackQueryHandler(new_client, pattern=buttons.NEW_CLIENT['callback_data']),
                         CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
                     ],
                     'VISITOR_PHONENUMBER': [
-                        CommandHandler('start', check_access),
+                        CommandHandler('start', start),
                         MessageHandler(filters=Filters.all, callback=enter_phone),
                     ],
                     'SUBSCRIPTION': [
-                        CommandHandler('start', check_access),
+                        CommandHandler('start', start),
                         CallbackQueryHandler(partial(activate_subscription, redis), pattern='activate_subscription'),
                         CallbackQueryHandler(new_visitor_role, pattern=buttons.CANCEL['callback_data']),
                         PreCheckoutQueryHandler(partial(confirm_payment, redis)),
                         MessageHandler(Filters.successful_payment, hello_client)
                     ],
                     'NEW_CONTRACTOR': [
-                        CommandHandler('start', check_access),
+                        CommandHandler('start', start),
                         CallbackQueryHandler(new_client, pattern=buttons.CANCEL['callback_data']),
                         MessageHandler(Filters.text, new_contractor_message)
                     ],
                     'CLIENT': [
-                        CommandHandler('start', check_access),
+                        CommandHandler('start', start),
                         CallbackQueryHandler(new_request, pattern=buttons.NEW_REQUEST['callback_data']),
                         CallbackQueryHandler(display_current_orders, pattern=buttons.CLIENT_CURRENT_ORDERS['callback_data']),
                         CallbackQueryHandler(display_order, pattern=buttons.ORDER['callback_data']),
@@ -607,6 +677,12 @@ class Command(BaseCommand):
                     'CLIENT_NEW_COMPLAINT': [
                         MessageHandler(filters=Filters.text, callback=partial(client_complaint_description, redis)),
                         CallbackQueryHandler(hello_client, pattern=buttons.CANCEL['callback_data']),
+
+                    ],
+                    'CONTRACTOR': [
+
+                    ],
+                    'MANAGER': [
 
                     ],
                     'ADMIN': [
