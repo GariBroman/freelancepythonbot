@@ -45,18 +45,24 @@ import main.management.commands.buttons as buttons
 
 START_INLINE = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton(**buttons.I_AM_CLIENT)],
-        [InlineKeyboardButton(**buttons.I_AM_CONTACTOR)],
-        [InlineKeyboardButton(**buttons.I_AM_MANAGER)],
-        [InlineKeyboardButton(**buttons.I_AM_OWNER)],
+        [
+            InlineKeyboardButton(**buttons.I_AM_CLIENT),
+            InlineKeyboardButton(**buttons.I_AM_CONTACTOR)
+        ],
+        [
+            InlineKeyboardButton(**buttons.I_AM_MANAGER),
+            InlineKeyboardButton(**buttons.I_AM_OWNER)
+        ],
     ]
 )
 
 
 VISITOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton(**buttons.NEW_CLIENT)],
-        [InlineKeyboardButton(**buttons.NEW_CONTRACTOR)]
+        [
+            InlineKeyboardButton(**buttons.NEW_CLIENT),
+            InlineKeyboardButton(**buttons.NEW_CONTRACTOR)
+        ]
 
     ]
 )
@@ -64,8 +70,10 @@ VISITOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
 CLIENT_INLINE_KEYBOARD = InlineKeyboardMarkup(
     [
         [InlineKeyboardButton(**buttons.NEW_REQUEST)],
-        [InlineKeyboardButton(**buttons.CLIENT_CURRENT_ORDERS)],
-        [InlineKeyboardButton(**buttons.CLIENT_CURRENT_TARIFF)],
+        [
+            InlineKeyboardButton(**buttons.CLIENT_CURRENT_ORDERS),
+            InlineKeyboardButton(**buttons.CLIENT_CURRENT_TARIFF)
+        ],
         [InlineKeyboardButton(**buttons.NEW_CONTRACTOR)]
     ]
 )
