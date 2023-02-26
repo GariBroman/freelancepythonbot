@@ -65,6 +65,7 @@ class Owner(models.Model):
         related_name='owners',
         on_delete=models.PROTECT
     )
+    active = models.BooleanField('Активность', default=False)
 
     class Meta:
         verbose_name = 'администратор'
@@ -99,6 +100,7 @@ class Manager(models.Model):
         related_name='managers',
         on_delete=models.PROTECT
     )
+    active = models.BooleanField('Активность', default=False)
 
     class Meta:
         verbose_name = 'менеджер'
@@ -330,3 +332,10 @@ class Complaint(models.Model):
     answer = models.TextField('Ответ на жалобу', blank=True)
     created_at = models.DateTimeField('Жалоба подана', auto_now_add=True, db_index=True)
     closed_at = models.DateTimeField('Жалоба закрыта', null=True, blank=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'жалоба'
+        verbose_name_plural = 'жалобы'
+
+    def __str__(self):
+        return f'{self.created_at} - {self.complaint} -> {self.order}'
