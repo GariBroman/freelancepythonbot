@@ -513,22 +513,36 @@ def contractor_display_orders(update: Update, context: CallbackContext) -> str:
     orders_buttons = list()
     if callback_data == buttons.CONTRACTOR_CURRENT_ORDERS['callback_data']:
         orders = db.get_contractor_current_orders(telegram_id=update.effective_chat.id)
-        message = 'Ваши текущие заказы:'
-        for num, order in enumerate(orders, 1):
-            message += f'\n\n{order["display"]}'
-            orders_buttons.append(InlineKeyboardButton(
-                text=f'{buttons.CURRENT_ORDER["text"]} {num}',
-                callback_data=f'{buttons.CURRENT_ORDER["callback_data"]}:::{order["id"]}'
-            ))
+        if orders:
+            message = 'Ваши текущие заказы:'
+            for num, order in enumerate(orders, 1):
+                message += f'\n\n{order["display"]}'
+                orders_buttons.append(InlineKeyboardButton(
+                    text=f'{buttons.CURRENT_ORDER["text"]} {num}',
+                    callback_data=f'{buttons.CURRENT_ORDER["callback_data"]}:::{order["id"]}'
+                ))
+        else:
+            message = 'У вас нет активных заказов'
     elif callback_data == buttons.CONTRACTOR_AVAILABLE_ORDERS['callback_data']:
         orders = db.get_contractor_available_orders(telegram_id=update.effective_chat.id)
-        message = 'Доступные заказы:'
-        for num, order in enumerate(orders, 1):
-            message += f'\n\n{order["display"]}'
-            orders_buttons.append(InlineKeyboardButton(
-                text=f'{buttons.AVAILABLE_ORDER["text"]} {num}',
-                callback_data=f'{buttons.AVAILABLE_ORDER["callback_data"]}:::{order["id"]}'
-            ))
+        if orders:
+            message = 'Доступные заказы:'
+            for num, order in enumerate(orders, 1):
+                message += f'\n\n{order["display"]}'
+                orders_buttons.append(InlineKeyboardButton(
+                    text=f'{buttons.AVAILABLE_ORDER["text"]} {num}',
+                    callback_data=f'{buttons.AVAILABLE_ORDER["callback_data"]}:::{order["id"]}'
+                ))
+        else:
+            message = 'У вас нет доступных заказов'
+    if not orders:
+        context.bot.send_message(
+            update.effective_chat.id,
+            text=message,
+        )
+        sleep(2)
+        return contractor_main(update=update, context=context)
+
     orders_buttons = list(chunked(orders_buttons, 3))
     orders_buttons.append([InlineKeyboardButton(**buttons.BACK_TO_CONTRACTOR_MAIN)])
     context.bot.send_message(
@@ -572,13 +586,33 @@ def contractor_display_order(update: Update, context: CallbackContext) -> str:
 @delete_prev_inline
 def contractor_take_order(update: Update, context: CallbackContext) -> str:
     _, order_id = update.callback_query.data.split(':::')
-    return 'CONTRACTOR'
+    db.close_order(order_id=order_id)
+    for manager_id in db.get_managers_telegram_ids():
+        context.bot.send_message(
+            manager_id,
+            text='Contractor "{update.effective_chat.id}" want take order "{order_id}"'
+        )
+    context.bot.send_message(
+        update.effective_chat.id,
+        text='Заявка отплавлена, ожидайте.'
+    )
+    return contractor_main(update=update, context=context)
 
 
 @delete_prev_inline
 def contractor_finish_order(update: Update, context: CallbackContext) -> str:
     _, order_id = update.callback_query.data.split(':::')
-    return 'CONTRACTOR'
+    db.close_order(order_id=order_id)
+    for manager_id in db.get_managers_telegram_ids():
+        context.bot.send_message(
+            manager_id,
+            text='Contractor "{update.effective_chat.id}" closed order "{order_id}"'
+        )
+    context.bot.send_message(
+        update.effective_chat.id,
+        text='Заказ закрыт'
+    )
+    return contractor_main(update=update, context=context)
 
 
 @delete_prev_inline
