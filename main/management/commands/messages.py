@@ -19,6 +19,8 @@ CHECK_ROLE = 'Укажите кто вы.'
 
 CLIENT_MAIN = 'Вы на главной странице заказчика'
 
+CONTRACTOR_MAIN = 'Вы на главное странице подрядчика'
+
 CONTRACTOR_NOT_FOUND = 'Исполнитель на ваш заказ еще не назначен.'
 
 DESCRIBE_REQUEST = dedent(

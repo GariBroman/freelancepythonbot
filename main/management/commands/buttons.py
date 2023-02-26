@@ -2,6 +2,8 @@
 
 BACK_TO_CLIENT_MAIN = {'text': 'На главную', 'callback_data': 'client_main'}
 
+BACK_TO_CONTRACTOR_MAIN = {'text': 'На главную', 'callback_data': 'contractor_main'}
+
 CANCEL = {'text': "Я передумал", 'callback_data': 'cancel'}
 
 CHECK_ACCESS_CALLBACK = 'check_access'
@@ -14,9 +16,15 @@ I_AM_MANAGER = {'text': 'Я менеджер', 'callback_data': f'{CHECK_ACCESS_
 
 I_AM_CLIENT = {'text': 'Я заказчик', 'callback_data': f'{CHECK_ACCESS_CALLBACK}:::client'}
 
+CHANGE_ROLE = {'text': 'Сменить роль', 'callback_data': 'change_role'}
+
 CONTRACTOR_CONTACTS = {'text': "Показать контакты подрядчика", "callback_data": 'send_contractor_contacts'}
 
 CONTRACTOR_CURRENT_ORDERS = {'text': 'Посмотреть актуальные заказы', 'callback_data': 'contractor_current_orders'}
+
+CONTRACTOR_AVAILABLE_ORDERS = {'text': 'Посмотреть доступные заказы', 'callback_data': 'contractor_available_orders'}
+
+CONTRACTOR_SALARY = {'text': 'Посмотреть зарплату', 'callback_data': 'contractor_salary'}
 
 CLIENT_CURRENT_ORDERS = {'text': 'Мои текущие заказы', 'callback_data': 'client_current_orders'}
 

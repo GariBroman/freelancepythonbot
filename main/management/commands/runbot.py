@@ -74,13 +74,16 @@ CLIENT_INLINE_KEYBOARD = InlineKeyboardMarkup(
             InlineKeyboardButton(**buttons.CLIENT_CURRENT_ORDERS),
             InlineKeyboardButton(**buttons.CLIENT_CURRENT_TARIFF)
         ],
-        [InlineKeyboardButton(**buttons.NEW_CONTRACTOR)]
+        [InlineKeyboardButton(**buttons.CHANGE_ROLE)]
     ]
 )
 
 CONTRACTOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
     [
-        [InlineKeyboardButton]
+        [InlineKeyboardButton(**buttons.CONTRACTOR_CURRENT_ORDERS)],
+        [InlineKeyboardButton(**buttons.CONTRACTOR_AVAILABLE_ORDERS)],
+        [InlineKeyboardButton(**buttons.CHANGE_ROLE)],
+
     ]
 )
 
@@ -113,7 +116,7 @@ def delete_prev_inline(func, *args, **kwargs):
     return wrapper
 
 
-def check_subscription(func, *args, **kwargs):
+def check_client_subscription(func, *args, **kwargs):
     def wrapper(*args, **kwargs):
         try:
             update, context = args[-2:]
@@ -148,6 +151,7 @@ def start(update: Update, context: CallbackContext) -> str:
         reply_markup=START_INLINE
     )
     return 'VISITOR'
+
 
 @delete_prev_inline
 def check_access(update: Update, context: CallbackContext) -> str:
@@ -184,10 +188,6 @@ def check_access(update: Update, context: CallbackContext) -> str:
         return new_client(update=update, context=context)
     return 'VISITOR'
     
-
-
-
-
 
 def subscription_alert(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
@@ -283,7 +283,7 @@ def hello_client(update: Update, context: CallbackContext) -> str:
     return 'CLIENT'
 
 @delete_prev_inline
-@check_subscription
+@check_client_subscription
 @check_available_request
 def new_request(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
@@ -295,7 +295,7 @@ def new_request(update: Update, context: CallbackContext) -> str:
 
 
 @delete_prev_inline
-@check_subscription
+@check_client_subscription
 @check_available_request
 def client_request_description(update: Update, context: CallbackContext) -> str:
     if len(update.message.text) > 1000:
@@ -497,14 +497,60 @@ def new_contractor_message(update: Update, context: CallbackContext) -> str:
 
 
 def hello_contractor(update: Update, context: CallbackContext) -> str:
-    #TODO
     context.bot.send_message(
         update.effective_chat.id,
-        'Поздравляю, вы подрядчик. Но мне пофиг, раздел бота не дописан!',
-        reply_markup=START_INLINE
+        text=messages.CONTRACTOR_MAIN
+        reply_markup=CONTRACTOR_INLINE_KEYBOARD
     )
-    return 'VISITOR'
+    return 'CONTRACTOR'
 
+
+def display_contractor_current_orders(update: Update, context: CallbackContext) -> str:
+    orders = db.get_contractor_current_orders(telegram_id=update.effective_chat.id)
+    message = 'Ваши текущие заказы:'
+    orders_buttons = list()
+    for num, order in enumerate(orders, 1):
+        message += f'\n\n{order["display"]}'
+        orders_buttons.append(InlineKeyboardButton(
+            text=f'{buttons.ORDER["text"]} {num}',
+            callback_data=f'{buttons.ORDER["callback_data"]}:::{order["id"]}'
+        ))
+    orders_buttons = list(chunked(orders_buttons, 3))
+    orders_buttons.append([InlineKeyboardButton(**buttons.BACK_TO_CONTRACTOR_MAIN)])
+    context.bot.send_message(
+        update.effective_chat.id,
+        text=message,
+        reply_markup=InlineKeyboardMarkup(orders_buttons)
+    )
+    return 'CONTRACTOR'
+
+def display_contractor_available_orders(update: Update, context: CallbackContext) -> str:
+    orders = db.get_contractor_current_orders(telegram_id=update.effective_chat.id)
+    message = 'Доступные заказы:'
+    orders_buttons = list()
+    for num, order in enumerate(orders, 1):
+        message += f'\n\n{order["display"]}'
+        orders_buttons.append(InlineKeyboardButton(
+            text=f'{buttons.ORDER["text"]} {num}',
+            callback_data=f'{buttons.ORDER["callback_data"]}:::{order["id"]}'
+        ))
+    orders_buttons = list(chunked(orders_buttons, 3))
+    orders_buttons.append([InlineKeyboardButton(**buttons.BACK_TO_CONTRACTOR_MAIN)])
+    context.bot.send_message(
+        update.effective_chat.id,
+        text=message,
+        reply_markup=InlineKeyboardMarkup(orders_buttons)
+    )
+    return 'CONTRACTOR'
+
+@delete_prev_inline
+def display_contractor_salary(update: Update, context: CallbackContext) -> str:
+    context.bot.send_message(
+        update.effective_chat.id,
+        text=db.get_contractor_salary(telegram_id=update.effective_chat.id),
+        reply_markup=CONTRACTOR_INLINE_KEYBOARD
+    )
+    return 'CONTRACTOR'
 
 def hello_admin(update: Update, context: CallbackContext) -> str:
     #TODO
@@ -659,6 +705,7 @@ class Command(BaseCommand):
                         MessageHandler(Filters.text, new_contractor_message)
                     ],
                     'CLIENT': [
+                        CallbackQueryHandler(start, pattern=buttons.CHANGE_ROLE['callback_data']),
                         CommandHandler('start', start),
                         CallbackQueryHandler(new_request, pattern=buttons.NEW_REQUEST['callback_data']),
                         CallbackQueryHandler(display_current_orders, pattern=buttons.CLIENT_CURRENT_ORDERS['callback_data']),
@@ -688,7 +735,11 @@ class Command(BaseCommand):
 
                     ],
                     'CONTRACTOR': [
-
+                        CallbackQueryHandler(start, pattern=buttons.CHANGE_ROLE['callback_data']),
+                        CallbackQueryHandler(display_contractor_current_orders, pattern=buttons.CONTRACTOR_CURRENT_ORDERS['callback_data']),
+                        CallbackQueryHandler(display_contractor_available_orders, pattern=buttons.CONTRACTOR_AVAILABLE_ORDERS['callback_data']),
+                        CallbackQueryHandler(display_contractor_salary, pattern=buttons.CONTRACTOR_SALARY['callback_data']),
+                        CallbackQueryHandler(hello_contractor, pattern=buttons.BACK_TO_CONTRACTOR_MAIN['callback_data']),
                     ],
                     'MANAGER': [
 
