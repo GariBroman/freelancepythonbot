@@ -17,24 +17,57 @@ class EntityNotFoundError(Exception):
     def __str__(self):
         return self.message 
 
-
-def get_role(telegram_id):
+def get_person(telegram_id: int) -> main_models.Person:
     try:
-        person = get_object_or_404(main_models.Person, telegram_id=telegram_id)
-        with suppress((main_models.Person.contractors.RelatedObjectDoesNotExist,
+        return main_models.Person.objects.get(telegram_id=telegram_id)
+    except main_models.Person.DoesNotExist:
+        return
+
+def is_admin(telegram_id: int) -> bool:
+    try:
+        main_models.Owner.objects.get(person__telegram_id=telegram_id, active=True)
+        return True
+    except main_models.Owner.DoesNotExist:
+        return False
+
+def is_manager(telegram_id: int) -> bool:
+    try:
+        main_models.Manager.objects.get(person__telegram_id=telegram_id, active=True)
+        return True
+    except main_models.Manager.DoesNotExist:
+        return False
+
+def is_contractor(telegram_id: int) -> bool:
+    try:
+        main_models.Contractor.objects.get(person__telegram_id=telegram_id, active=True)
+        return True
+    except main_models.Contractor.DoesNotExist:
+        return False
+
+def check_role(telegram_id: int, claimed_role: str) -> bool:
+    try:
+        person = main_models.Person.objects.get(telegram_id=telegram_id)
+        
+        with suppress((#main_models.Person.contractors.RelatedObjectDoesNotExist,
                        main_models.Person.owners.RelatedObjectDoesNotExist,
+                       main_models.Person.clients.RelatedObjectDoesNotExist,
                        main_models.Person.managers.RelatedObjectDoesNotExist)):
             if person.owners:
+                print(person.owners)
                 return 'admin'
-            elif person.managers:
+            if person.managers:
+                print(person.owners)
                 return 'manager'
-            elif person.contractors:
+            if person.contractors:
+                print('fuck', person.contractors)
                 return 'contractor'
-            elif person.clients:
+            if person.clients:
+                print(person.clients)
                 return 'client'
 
-    except Http404:
-        return 'visitor'
+    except main_models.Person.DoesNotExist:
+        if claimed_role == 'client':
+            return 'visitor'
 
 
 def create_person(telegram_id: int,
