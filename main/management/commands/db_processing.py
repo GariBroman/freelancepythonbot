@@ -148,7 +148,7 @@ def can_see_contractor_contacts(telegram_id: int) -> bool:
 
 
 def create_comment_from_client(order_id, comment: str):
-    order = main_models.Orders.objects.get(id=order_id)
+    order = main_models.Order.objects.get(id=order_id)
     main_models.OrderComments.objects.create(
         order=order,
         from_client=True,
@@ -157,7 +157,7 @@ def create_comment_from_client(order_id, comment: str):
 
 
 def create_comment_from_contractor(order_id, comment: str):
-    order = main_models.Orders.objects.get(id=order_id)
+    order = main_models.Order.objects.get(id=order_id)
     main_models.OrderComments.objects.create(
         order=order,
         from_contractor=True,
