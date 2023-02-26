@@ -251,3 +251,16 @@ def set_estimate_datetime(order_id: int, estimate_datetime: datetime) -> None:
     order = main_models.Order.objects.get(id=order_id)
     order.estimated_time=estimate_datetime
     order.save()
+
+
+def close_order(order_id: int) -> None: # TODO return ссылка на заказ в админке!
+    order = main_models.Order.objects.get(id=order_id)
+    order.finished_at=now()
+    order.save()
+
+
+def get_managers_telegram_ids() -> tuple[str]:
+    managers = main_models.Manager.object.filter(active=True)
+
+    return tuple(str(manager.person.telegram_id) for manager in managers)
+
