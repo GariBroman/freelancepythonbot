@@ -42,9 +42,8 @@ class Client(models.Model):
         orders = list()
         for subscription in subscriptions:
             for order in subscription.orders.all():
-                if order.finished_at is None and order.declined==False:
+                if order.finished_at is None and not order.declined:
                     orders.append(order)
-
 
         serialize_order = []
         for order in orders:
@@ -155,7 +154,7 @@ class Tariff(models.Model):
         return f'{days_str}{hours_str}{minutes_str}{seconds_str}'
 
     def display(self) -> str:
-        #TODO move this bullshit to subscription.info_subscription
+        # TODO move this bullshit to subscription.info_subscription
         return dedent(
             f"""
             {self.title}.
@@ -265,7 +264,7 @@ class Order(models.Model):
         return f'Создан: {self.created_at.strftime("%d.%m.%Y %H:%M")} Задание: {self.description}'
 
     def display(self) -> str:
-        #TODO
+        # TODO
         message = dedent(
                 f"""
                 {self.created_at.strftime('%Y-%m-%d')}

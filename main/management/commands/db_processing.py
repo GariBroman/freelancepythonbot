@@ -1,8 +1,22 @@
+from django.utils.timezone import datetime, timedelta, now
 from typing import Any
 from main import models as main_models
 from django.db.models import QuerySet, F
 
 import main.management.commands.messages as messages
+
+
+def fetch_start_end_of_month(date=None):
+    if date:
+        point = date
+    else:
+        point = datetime.now().date()
+
+    start_month = datetime(day=1, month=point.month, year=point.year)
+    next_month = datetime(day=28, month=point.month, year=point.year) + timedelta(days=4)
+    end_month = datetime(day=1, month=next_month.month, year=next_month.year)
+
+    return (start_month, end_month)
 
 
 class EntityNotFoundError(Exception):
@@ -12,11 +26,13 @@ class EntityNotFoundError(Exception):
     def __str__(self):
         return self.message 
 
+
 def get_person(telegram_id: int) -> main_models.Person:
     try:
         return main_models.Person.objects.get(telegram_id=telegram_id)
     except main_models.Person.DoesNotExist:
         return
+
 
 def is_admin(telegram_id: int) -> bool:
     try:
@@ -25,12 +41,14 @@ def is_admin(telegram_id: int) -> bool:
     except main_models.Owner.DoesNotExist:
         return False
 
+
 def is_manager(telegram_id: int) -> bool:
     try:
         main_models.Manager.objects.get(person__telegram_id=telegram_id, active=True)
         return True
     except main_models.Manager.DoesNotExist:
         return False
+
 
 def is_contractor(telegram_id: int) -> bool:
     try:
@@ -208,10 +226,15 @@ def get_contractor_available_orders(telegram_id: str) -> list[dict[str, Any], ..
     return available_orders
 
 
-def display_contractor_salary(telegram_id: str) -> str: # TODO сделать за текущий месяц
+def display_contractor_salary(telegram_id: str) -> str:  # TODO сделать за текущий месяц
     contractor = get_contractor(telegram_id=telegram_id)
-
-    orders = main_models.Order.objects.filter(contractor=contractor).annotate(total_salary=F('salary')).first()
+    start_period, end_period = fetch_start_end_of_month()
+    # filter_args = {'contractor': contractor, 'finished_at__gte': start_period, 'finished_at__lt': end_period}
+    orders = main_models.Order.objects.filter(
+        contractor=contractor).annotate(total_salary=F('salary')).first()
+        # finished_at__gte=start_period,finished_at__lt=end_period
+    # print(orders)
+    # print(f'Всего вы выполнили заказов на {orders.total_salary} руб.')
 
     return f'Всего вы выполнили заказов на {orders.total_salary} руб.'
 
@@ -220,4 +243,8 @@ def display_order_info(order_id: int) -> str:
     order = main_models.Order.objects.get(id=order_id)
 
     return order.display()
+
+
+def set_estimate_datetime(order_id: int, estimate_datetime: datetime) -> None:
+    main_models.Order.objects.get(id=order_id).update(estimated_time=estimate_datetime)
 
