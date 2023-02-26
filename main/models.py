@@ -299,7 +299,7 @@ class ExampleOrder(models.Model):
 
 
 class Complaint(models.Model):
-    Order = models.ForeignKey(
+    order = models.ForeignKey(
         Order,
         verbose_name='жалоба',
         related_name='complaints',

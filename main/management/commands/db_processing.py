@@ -176,6 +176,7 @@ def get_order_contractor_contact(order_id: str) -> dict:
         'user_id': order.contractor.person.telegram_id
     }
 
+
 def create_client_order_complaint(order_id: int, complaint: str) -> None:
     order = main_models.Order.objects.get(id=order_id)
     main_models.Complaint.objects.create(
