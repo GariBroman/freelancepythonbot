@@ -329,4 +329,4 @@ class Complaint(models.Model):
     complaint = models.TextField('Текст жалобы', blank=True)
     answer = models.TextField('Ответ на жалобу', blank=True)
     created_at = models.DateTimeField('Жалоба подана', auto_now_add=True, db_index=True)
-    closed_at = models.DateTimeField('Жалоба закрыта', db_index=True)
+    closed_at = models.DateTimeField('Жалоба закрыта', null=True, blank=True, db_index=True)
