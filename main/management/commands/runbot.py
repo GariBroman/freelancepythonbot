@@ -1,14 +1,14 @@
-from ast import Delete
 from contextlib import suppress
-from pydoc import visiblename
 from textwrap import dedent
 from functools import partial
 from time import sleep
 import re
 import os
+from unittest.util import strclass
 from uuid import uuid4
 
 from django.core.management.base import BaseCommand
+from django.utils.timezone import datetime, make_aware
 from environs import Env
 from more_itertools import chunked
 from phonenumber_field.validators import (
@@ -142,6 +142,7 @@ def check_available_request(func, *args, **kwargs):
     return wrapper
 
 
+@delete_prev_inline
 def start(update: Update, context: CallbackContext) -> str:
     if not db.get_person(telegram_id=update.effective_chat.id):
         return hello_visitor(update=update, context=context)
@@ -157,7 +158,7 @@ def start(update: Update, context: CallbackContext) -> str:
 def check_access(update: Update, context: CallbackContext) -> str:
     _, claimed_role = update.callback_query.data.split(":::")
     
-    if claimed_role == 'admin':
+    if claimed_role == 'owner':
         if db.is_admin(telegram_id=update.effective_chat.id):
             return hello_admin(update=update, context=context)
         else:
@@ -177,7 +178,7 @@ def check_access(update: Update, context: CallbackContext) -> str:
             )
     elif claimed_role == 'contractor':
         if db.is_contractor(telegram_id=update.effective_chat.id):
-            return hello_contractor(update=update, context=context)
+            return contractor_main(update=update, context=context)
         else:
             context.bot.send_message(
                 update.effective_chat.id,
@@ -496,7 +497,8 @@ def new_contractor_message(update: Update, context: CallbackContext) -> str:
     return new_client(update=update, context=context)
 
 
-def hello_contractor(update: Update, context: CallbackContext) -> str:
+@delete_prev_inline
+def contractor_main(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.CONTRACTOR_MAIN,
@@ -505,16 +507,28 @@ def hello_contractor(update: Update, context: CallbackContext) -> str:
     return 'CONTRACTOR'
 
 
-def display_contractor_current_orders(update: Update, context: CallbackContext) -> str:
-    orders = db.get_contractor_current_orders(telegram_id=update.effective_chat.id)
-    message = 'Ваши текущие заказы:'
+@delete_prev_inline
+def contractor_display_orders(update: Update, context: CallbackContext) -> str:
+    callback_data = update.callback_query.data
     orders_buttons = list()
-    for num, order in enumerate(orders, 1):
-        message += f'\n\n{order["display"]}'
-        orders_buttons.append(InlineKeyboardButton(
-            text=f'{buttons.ORDER["text"]} {num}',
-            callback_data=f'{buttons.ORDER["callback_data"]}:::{order["id"]}'
-        ))
+    if callback_data == buttons.CONTRACTOR_CURRENT_ORDERS['callback_data']:
+        orders = db.get_contractor_current_orders(telegram_id=update.effective_chat.id)
+        message = 'Ваши текущие заказы:'
+        for num, order in enumerate(orders, 1):
+            message += f'\n\n{order["display"]}'
+            orders_buttons.append(InlineKeyboardButton(
+                text=f'{buttons.CURRENT_ORDER["text"]} {num}',
+                callback_data=f'{buttons.CURRENT_ORDER["callback_data"]}:::{order["id"]}'
+            ))
+    elif callback_data == buttons.CONTRACTOR_AVAILABLE_ORDERS['callback_data']:
+        orders = db.get_contractor_available_orders(telegram_id=update.effective_chat.id)
+        message = 'Доступные заказы:'
+        for num, order in enumerate(orders, 1):
+            message += f'\n\n{order["display"]}'
+            orders_buttons.append(InlineKeyboardButton(
+                text=f'{buttons.AVAILABLE_ORDER["text"]} {num}',
+                callback_data=f'{buttons.AVAILABLE_ORDER["callback_data"]}:::{order["id"]}'
+            ))
     orders_buttons = list(chunked(orders_buttons, 3))
     orders_buttons.append([InlineKeyboardButton(**buttons.BACK_TO_CONTRACTOR_MAIN)])
     context.bot.send_message(
@@ -524,27 +538,85 @@ def display_contractor_current_orders(update: Update, context: CallbackContext) 
     )
     return 'CONTRACTOR'
 
-def display_contractor_available_orders(update: Update, context: CallbackContext) -> str:
-    orders = db.get_contractor_current_orders(telegram_id=update.effective_chat.id)
-    message = 'Доступные заказы:'
-    orders_buttons = list()
-    for num, order in enumerate(orders, 1):
-        message += f'\n\n{order["display"]}'
-        orders_buttons.append(InlineKeyboardButton(
-            text=f'{buttons.ORDER["text"]} {num}',
-            callback_data=f'{buttons.ORDER["callback_data"]}:::{order["id"]}'
-        ))
-    orders_buttons = list(chunked(orders_buttons, 3))
-    orders_buttons.append([InlineKeyboardButton(**buttons.BACK_TO_CONTRACTOR_MAIN)])
-    context.bot.send_message(
-        update.effective_chat.id,
-        text=message,
-        reply_markup=InlineKeyboardMarkup(orders_buttons)
-    )
-    return 'CONTRACTOR'
 
 @delete_prev_inline
-def display_contractor_salary(update: Update, context: CallbackContext) -> str:
+def contractor_display_order(update: Update, context: CallbackContext) -> str:
+    callback, order_id = update.callback_query.data.split(':::')
+    if callback == buttons.AVAILABLE_ORDER['callback_data']:
+        order_buttons = [
+            [InlineKeyboardButton(
+                text=buttons.TAKE_ORDER['text'],
+                callback_data=f'{buttons.TAKE_ORDER["callback_data"]}:::{order_id}'
+            )]
+        ]
+    elif callback == buttons.CURRENT_ORDER['callback_data']:
+        order_buttons = [
+            [InlineKeyboardButton(
+                text=buttons.FINISH_ORDER['text'],
+                callback_data=f'{buttons.FINISH_ORDER["callback_data"]}:::{order_id}'
+            )],
+            [InlineKeyboardButton(
+                text=buttons.CONTRACTOR_SET_ESTIMATE_DATETIME['text'],
+                callback_data=f'{buttons.CONTRACTOR_SET_ESTIMATE_DATETIME["callback_data"]}:::{order_id}'
+            )]
+        ]
+    order_buttons.append([InlineKeyboardButton(**buttons.BACK_TO_CONTRACTOR_MAIN)])
+    context.bot.send_message(
+        update.effective_chat.id,
+        db.display_order_info(order_id=order_id),
+        reply_markup=InlineKeyboardMarkup(order_buttons)
+    )
+    return 'CONTRACTOR'
+
+
+@delete_prev_inline
+def contractor_take_order(update: Update, context: CallbackContext) -> str:
+    _, order_id = update.callback_query.data.split(':::')
+    return 'CONTRACTOR'
+
+
+@delete_prev_inline
+def contractor_finish_order(update: Update, context: CallbackContext) -> str:
+    _, order_id = update.callback_query.data.split(':::')
+    return 'CONTRACTOR'
+
+
+@delete_prev_inline
+def contractor_set_estimate_datetime(redis: Redis, update: Update, context: CallbackContext) -> str:
+    _, order_id = update.callback_query.data.split(':::')
+    redis.set(f'{update.effective_chat.id}_contractor_order_id', order_id)
+    context.bot.send_message(
+        update.effective_chat.id,
+        messages.SET_ESTIMATE_DATETIME,
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(**buttons.BACK_TO_CONTRACTOR_MAIN)]])
+    )
+    return 'CONTACTOR_SET_ESTIMATE_DATETIME'
+
+
+@delete_prev_inline
+def contractor_enter_estimate_datetime(redis: Redis, update: Update, context: CallbackContext) -> str:
+    separators = '[:,. ]'
+    datetime_regex = r'\d{4}[:,. ]\d{2}[:,. ]\d{2}[:,. ]\d{2}[:,. ]\d{2}'
+    if not re.match(datetime_regex, update.message.text):
+        context.bot.send_message(
+            update.effective_chat.id,
+            messages.SET_ESTIMATE_DATETIME,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(**buttons.BACK_TO_CONTRACTOR_MAIN)]])
+        )
+        return 'CONTACTOR_SET_ESTIMATE_DATETIME'
+    year, month, day, hour, minute = re.split(separators, update.message.text)
+    estimate_datetime = make_aware(
+        datetime(int(year), int(month), int(day), int(hour), int(minute), 0, 0)
+    )
+    print(estimate_datetime)
+    order_id = redis.get(f'{update.effective_chat.id}_contractor_order_id')
+    db.set_estimate_datetime(order_id=order_id, estimate_datetime=estimate_datetime)
+    redis.delete(f'{update.effective_chat.id}_contractor_order_id')
+    return contractor_main(update=update, context=context)
+
+
+@delete_prev_inline
+def contractor_display_salary(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
         text=db.get_contractor_salary(telegram_id=update.effective_chat.id),
@@ -552,6 +624,8 @@ def display_contractor_salary(update: Update, context: CallbackContext) -> str:
     )
     return 'CONTRACTOR'
 
+
+@delete_prev_inline
 def hello_admin(update: Update, context: CallbackContext) -> str:
     #TODO
     context.bot.send_message(
@@ -562,6 +636,7 @@ def hello_admin(update: Update, context: CallbackContext) -> str:
     return 'VISITOR'
 
 
+@delete_prev_inline
 def hello_manager(update: Update, context: CallbackContext) -> str:
     #TODO
     context.bot.send_message(
@@ -572,6 +647,7 @@ def hello_manager(update: Update, context: CallbackContext) -> str:
     return 'VISITOR'
 
 
+@delete_prev_inline
 def tell_about_subscription(update: Update, context: CallbackContext) -> str:
     tariffs = db.get_tariffs()
     message = "Давайте расскажу про наши тарифные планы:\n"
@@ -736,10 +812,19 @@ class Command(BaseCommand):
                     ],
                     'CONTRACTOR': [
                         CallbackQueryHandler(start, pattern=buttons.CHANGE_ROLE['callback_data']),
-                        CallbackQueryHandler(display_contractor_current_orders, pattern=buttons.CONTRACTOR_CURRENT_ORDERS['callback_data']),
-                        CallbackQueryHandler(display_contractor_available_orders, pattern=buttons.CONTRACTOR_AVAILABLE_ORDERS['callback_data']),
-                        CallbackQueryHandler(display_contractor_salary, pattern=buttons.CONTRACTOR_SALARY['callback_data']),
-                        CallbackQueryHandler(hello_contractor, pattern=buttons.BACK_TO_CONTRACTOR_MAIN['callback_data']),
+                        CallbackQueryHandler(contractor_display_orders, pattern=buttons.CONTRACTOR_CURRENT_ORDERS['callback_data']),
+                        CallbackQueryHandler(contractor_display_orders, pattern=buttons.CONTRACTOR_AVAILABLE_ORDERS['callback_data']),
+                        CallbackQueryHandler(contractor_display_order, pattern=buttons.CURRENT_ORDER['callback_data']),
+                        CallbackQueryHandler(contractor_display_order, pattern=buttons.AVAILABLE_ORDER['callback_data']),
+                        CallbackQueryHandler(contractor_take_order, pattern=buttons.TAKE_ORDER['callback_data']),
+                        CallbackQueryHandler(contractor_finish_order, pattern=buttons.FINISH_ORDER['callback_data']),
+                        CallbackQueryHandler(partial(contractor_set_estimate_datetime, redis), pattern=buttons.CONTRACTOR_SET_ESTIMATE_DATETIME['callback_data']),
+                        CallbackQueryHandler(contractor_display_salary, pattern=buttons.CONTRACTOR_SALARY['callback_data']),
+                        CallbackQueryHandler(contractor_main, pattern=buttons.BACK_TO_CONTRACTOR_MAIN['callback_data']),
+                    ],
+                    'CONTACTOR_SET_ESTIMATE_DATETIME': [
+                        CallbackQueryHandler(contractor_main, pattern=buttons.BACK_TO_CONTRACTOR_MAIN['callback_data']),
+                        MessageHandler(filters=Filters.text, callback=partial(contractor_enter_estimate_datetime, redis)),
                     ],
                     'MANAGER': [
 

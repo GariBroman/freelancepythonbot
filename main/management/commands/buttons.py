@@ -1,5 +1,7 @@
 # Просьба созранять алфавитный порядок
 
+AVAILABLE_ORDER = {'text': 'Заказ', 'callback_data': 'show_available_order'}
+
 BACK_TO_CLIENT_MAIN = {'text': 'На главную', 'callback_data': 'client_main'}
 
 BACK_TO_CONTRACTOR_MAIN = {'text': 'На главную', 'callback_data': 'contractor_main'}
@@ -7,6 +9,10 @@ BACK_TO_CONTRACTOR_MAIN = {'text': 'На главную', 'callback_data': 'cont
 CANCEL = {'text': "Я передумал", 'callback_data': 'cancel'}
 
 CHECK_ACCESS_CALLBACK = 'check_access'
+
+CURRENT_ORDER = {'text': 'Заказ', 'callback_data': 'show_current_order'}
+
+FINISH_ORDER = {'text': 'Сдать заказ', 'callback_data': 'finish_order'}
 
 I_AM_OWNER = {'text': 'Я владелец', 'callback_data': f'{CHECK_ACCESS_CALLBACK}:::owner'}
 
@@ -25,6 +31,8 @@ CONTRACTOR_CURRENT_ORDERS = {'text': 'Посмотреть актуальные 
 CONTRACTOR_AVAILABLE_ORDERS = {'text': 'Посмотреть доступные заказы', 'callback_data': 'contractor_available_orders'}
 
 CONTRACTOR_SALARY = {'text': 'Посмотреть зарплату', 'callback_data': 'contractor_salary'}
+
+CONTRACTOR_SET_ESTIMATE_DATETIME = {'text': 'Указать срок выполнения заказа', 'callback_data': 'contractor_set_estimate_datetime'}
 
 CLIENT_CURRENT_ORDERS = {'text': 'Мои текущие заказы', 'callback_data': 'client_current_orders'}
 
@@ -47,3 +55,5 @@ ORDER_COMMENT = {'text': 'Отправить уточнение', 'callback_data
 ORDER_COMPLAINT = {'text': 'Есть претензия', 'callback_data': 'complaint'}
 
 PHONENUMBER_REQUEST = 'Поделиться номером'
+
+TAKE_ORDER = {'text': 'Подать заявку на выполнение', 'callback_data': 'take_order'}

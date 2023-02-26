@@ -107,6 +107,8 @@ PHONE_INSTEAD_REQUEST = dedent(
 
 REGISTRATION_COMPLETE = 'Вы успешно зарегистрировались'
 
+SET_ESTIMATE_DATETIME = 'Введите дату и время в формате ГГГГ:ММ:ДД:ЧЧ:ММ'
+
 SUBSCRIPTION_ALERT = dedent(
     """
     Для использования сервиса вам необходимо приобрести подписку
