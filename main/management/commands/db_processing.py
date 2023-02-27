@@ -30,7 +30,7 @@ def fetch_start_end_of_month(date: datetime = None) -> tuple[datetime, datetime]
     return start_month, end_month
 
 
-def get_person(telegram_id: int) -> main_models.Person | None:
+def get_person(telegram_id: int) -> main_models.Person or None:
     try:
         return main_models.Person.objects.get(telegram_id=telegram_id)
     except main_models.Person.DoesNotExist:
@@ -112,6 +112,7 @@ def create_subscription(telegram_id: int,
         payment_id=payment_id
     )
     return subscription
+
 
 def create_order(telegram_id: int, description: str) -> main_models.Order:
     subscription = main_models.Client.objects.get(person__telegram_id=telegram_id) \
@@ -198,7 +199,7 @@ def create_client_order_complaint(order_id: int,
     return order, complaint
 
 
-def get_contractor_current_orders(telegram_id: int) -> list[dict[str, int|str]]:
+def get_contractor_current_orders(telegram_id: int) -> list[dict[str, int or str]]:
     contractor = get_contractor(telegram_id=telegram_id)
     orders = main_models.Order.objects.filter(contractor=contractor).filter(finished_at__isnull=True). \
         filter(declined=False).order_by('created_at')
@@ -208,7 +209,7 @@ def get_contractor_current_orders(telegram_id: int) -> list[dict[str, int|str]]:
     return current_orders
 
 
-def get_contractor_available_orders(telegram_id: int) -> list[dict[str, int|str]]:
+def get_contractor_available_orders(telegram_id: int) -> list[dict[str, int or str]]:
     orders = main_models.Order.objects.all().order_by('created_at')
     available_orders = [
         {'id': order.id, 'display': order.short_display()} for order in orders if order.is_available_order()
@@ -239,14 +240,14 @@ def display_order_info(order_id: int) -> str:
 
 def set_estimate_datetime(order_id: int, estimate_datetime: datetime) -> main_models.Order:
     order = main_models.Order.objects.get(id=order_id)
-    order.estimated_time=estimate_datetime
+    order.estimated_time = estimate_datetime
     order.save()
     return order
 
 
-def close_order(order_id: int) -> None: # TODO return ссылка на заказ в админке!
+def close_order(order_id: int) -> None:  # TODO return ссылка на заказ в админке!
     order = main_models.Order.objects.get(id=order_id)
-    order.finished_at=now()
+    order.finished_at = now()
     order.save()
 
 
@@ -254,4 +255,3 @@ def get_managers_telegram_ids() -> tuple[int]:
     managers = main_models.Manager.objects.filter(active=True)
 
     return tuple(manager.person.telegram_id for manager in managers)
-
