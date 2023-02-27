@@ -558,7 +558,7 @@ def contractor_display_orders(update: Update, context: CallbackContext) -> str:
         if orders:
             message = 'Доступные заказы:'
             for num, order in enumerate(orders, 1):
-                message += f'\n\n{order["display"]}'
+                message += f'\n{buttons.AVAILABLE_ORDER["text"]} {num}.{order["display"]}'
                 orders_buttons.append(InlineKeyboardButton(
                     text=f'{buttons.AVAILABLE_ORDER["text"]} {num}',
                     callback_data=f'{buttons.AVAILABLE_ORDER["callback_data"]}:::{order["id"]}'
