@@ -1,3 +1,5 @@
+import os
+from textwrap import dedent
 from django.contrib import admin
 from django import forms
 from django.db.models import Sum
@@ -17,6 +19,7 @@ from main.models import (
     Person,
     Complaint
 )
+from telegram import Bot
 
 
 import nested_admin
@@ -114,7 +117,7 @@ class OrderAdmin(admin.ModelAdmin):
 class PersonAdmin(admin.ModelAdmin):
     search_fields = ('name', 'phone', 'telegram_id')
     list_display = ('name', 'telegram_id', 'phone')
-
+    
 
 @admin.register(Client)
 class ClientAdmin(nested_admin.NestedModelAdmin):
@@ -151,6 +154,35 @@ class ContractorAdmin(admin.ModelAdmin):
     ]
     list_display = ('__str__', 'get_telegram_id', 'active')
     search_fields = ('person__name', 'person__phone', 'person__telegram_id')
+
+    def get_salary(self, request, queryset):
+        summary = dedent(
+            '''
+            Отчет по зарплатам:
+            
+            '''
+        )
+        for contractor in queryset.prefetch_related('orders'):
+            finished_orders = [order for order in contractor.orders.exclude(finished_at=None)]
+            salary = sum([order.salary for order in finished_orders])
+            summary += dedent(
+                f'''
+                Исполнитель: {contractor}
+                Выполнено заказов: {len(finished_orders)}
+                Заработано: {salary}
+                '''
+            )
+        managers = Manager.objects.filter(active=True)
+        bot = Bot(token=os.getenv('TELEGRAM_BOT_TOKEN'))
+        for manager in managers:
+            bot.send_message(
+                manager.person.telegram_id,
+                summary
+            )
+
+
+    get_salary.short_description = "Get salary"
+    actions = [get_salary]
 
     @admin.display(ordering='person__telegram_id', description='telegram_id')
     def get_telegram_id(self, obj):
