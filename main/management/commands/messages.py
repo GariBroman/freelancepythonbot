@@ -61,10 +61,6 @@ NO_AVAILABLE_REQUESTS = dedent(
     """
 )
 
-NOT_ADMIN = '❌ У вас нет прав доступа администратора.'
-
-NOT_MANAGER = '❌ У вас нет прав доступа менеджера.'
-
 NOT_CONTRACTOR = dedent(
     """
     ❌ Вы не числитесь как активный подрядчик.
