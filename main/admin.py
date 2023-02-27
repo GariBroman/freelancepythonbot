@@ -2,10 +2,8 @@ import os
 from textwrap import dedent
 from django.contrib import admin
 from django import forms
-from django.db.models import Sum
 from django.db import models
 from django.forms import Textarea
-from django.utils import timezone
 from main.models import (
     Order, 
     ExampleOrder, 
@@ -101,16 +99,31 @@ class OrderAdmin(admin.ModelAdmin):
     @admin.display(ordering='subscription__client', description='client')
     def get_client(self, obj):
         return obj.subscription.client
-    actions = ['get_monthly_salaries']  
 
-    @admin.action(description='Get monthly salaries')
-    def get_monthly_salaries(modeladmin, request, queryset):
-        payments = queryset.filter(finished_at__gte=timezone.now() - timezone.timedelta(days=30)) \
-            .select_related('contractor__person').values('contractor__person__telegram_id').annotate(total_salary=Sum('salary'))
-        print(payments)
-        with open("example.txt", "w") as f:
-            f.write(str(payments))
-        return payments    
+    def get_avg_orders_count(self, request, queryset):
+        summary = dedent(
+            '''
+            Отчет по числу заказов:
+            
+            '''
+        )
+        
+        orders_count = queryset.count()
+        summary += dedent(
+            f'''
+            Всего заказов: {orders_count}
+            '''
+        )
+        managers = Manager.objects.filter(active=True)
+        bot = Bot(token=os.getenv('TELEGRAM_BOT_TOKEN'))
+        for manager in managers:
+            bot.send_message(
+                manager.person.telegram_id,
+                summary
+            )
+    
+    get_avg_orders_count.short_description = "Get orders count"
+    actions = ['get_avg_orders_count']  
 
 
 @admin.register(Person)
@@ -154,6 +167,13 @@ class ContractorAdmin(admin.ModelAdmin):
     ]
     list_display = ('__str__', 'get_telegram_id', 'active')
     search_fields = ('person__name', 'person__phone', 'person__telegram_id')
+    list_filter = (
+        'orders__created_at', 
+        'orders__take_at', 
+        'orders__estimated_time', 
+        'orders__finished_at', 
+        'orders__declined'
+    )
 
     def get_salary(self, request, queryset):
         summary = dedent(
@@ -180,7 +200,6 @@ class ContractorAdmin(admin.ModelAdmin):
                 summary
             )
 
-
     get_salary.short_description = "Get salary"
     actions = [get_salary]
 
@@ -196,6 +215,42 @@ class ClientSubscriptionAdmin(admin.ModelAdmin):
     ]
     list_display = ('client', 'orders_left', 'tariff', 'contractor')
     search_fields = ('client__person__name', 'contractor__person__name')
+    list_filter = (
+        'orders__created_at', 
+        'orders__take_at', 
+        'orders__estimated_time', 
+        'orders__finished_at', 
+        'orders__declined'
+    )
+
+    def get_client_orders(self, request, queryset):
+        summary = dedent(
+            '''
+            Отчет по заказам:
+            
+            '''
+        )
+        for client in queryset.prefetch_related('orders'):
+            created_orders = len([order for order in client.orders.all()])
+            declined_orders = len([order for order in client.orders.filter(declined=True)])
+            summary += dedent(
+                f'''
+                Клиент: {client}
+                Размещено заказов: {created_orders}
+                Отклонено заказов: {declined_orders}
+                '''
+            )
+        managers = Manager.objects.filter(active=True)
+        bot = Bot(token=os.getenv('TELEGRAM_BOT_TOKEN'))
+        for manager in managers:
+            bot.send_message(
+                manager.person.telegram_id,
+                summary
+            )
+
+    get_client_orders.short_description = "Get clients orders"
+
+    actions = [get_client_orders]
 
 
 @admin.register(Complaint)
