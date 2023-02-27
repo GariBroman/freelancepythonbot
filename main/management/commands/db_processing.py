@@ -1,5 +1,6 @@
 from django.db.models import QuerySet, Sum
 from django.utils.timezone import datetime, timedelta, now
+from django.db.utils import IntegrityError
 
 import main.management.commands.messages as messages
 
@@ -60,7 +61,10 @@ def create_client(telegram_id: int) -> None:
 
 def create_contractor(telegram_id: int, comment: str) -> main_models.Contractor:
     person = main_models.Person.objects.get(telegram_id=telegram_id)
-    contractor = main_models.Contractor.objects.get_or_create(person=person, comment=comment)
+    try:
+        contractor = main_models.Contractor.objects.get_or_create(person=person, comment=comment)
+    except IntegrityError:
+        contractor = main_models.Contractor.objects.get(person=person)
     return contractor
 
 
