@@ -248,15 +248,6 @@ def enter_phone(update: Update, context: CallbackContext) -> str:
         )
     return start(update=update, context=context)
 
-@delete_prev_inline
-def new_visitor_role(update: Update, context: CallbackContext) -> str:
-    context.bot.send_message(
-        update.effective_chat.id,
-        text=messages.NEW_VISITOR_ROLE,
-        reply_markup=START_INLINE
-    )
-    return 'VISITOR'
-
 
 @delete_prev_inline
 def new_client(update: Update, context: CallbackContext) -> str:
@@ -824,7 +815,7 @@ class Command(BaseCommand):
                     'SUBSCRIPTION': [
                         CommandHandler('start', start),
                         CallbackQueryHandler(partial(activate_subscription, redis), pattern='activate_subscription'),
-                        CallbackQueryHandler(new_visitor_role, pattern=buttons.CANCEL['callback_data']),
+                        CallbackQueryHandler(start, pattern=buttons.CANCEL['callback_data']),
                         PreCheckoutQueryHandler(partial(confirm_payment, redis)),
                         MessageHandler(Filters.successful_payment, client_main)
                     ],
