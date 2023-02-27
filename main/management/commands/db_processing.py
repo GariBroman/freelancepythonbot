@@ -167,6 +167,7 @@ def create_comment_from_client(order_id: int,
     )
     return order, comment
 
+
 def create_comment_from_contractor(order_id: int, comment: str) -> None:
     order = main_models.Order.objects.get(id=order_id)
     main_models.OrderComments.objects.create(
