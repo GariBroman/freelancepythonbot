@@ -155,8 +155,9 @@ def can_see_contractor_contacts(telegram_id: int) -> bool:
 
 def create_comment_from_client(order_id: int,
                                comment: str) -> tuple[main_models.Order, main_models.OrderComments]:
+    order = main_models.Order.objects.get(id=order_id)
     comment = main_models.OrderComments.objects.create(
-        order=main_models.Order.objects.get(id=order_id),
+        order=order,
         author='client',
         comment=comment
     )
