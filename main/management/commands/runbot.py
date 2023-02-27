@@ -99,6 +99,7 @@ CANCEL_INLINE = InlineKeyboardMarkup(
     ]
 )
 
+
 def delete_prev_inline(func, *args, **kwargs):
     def wrapper(*args, **kwargs):
         try:
@@ -141,7 +142,9 @@ def check_available_request(func, *args, **kwargs):
     return wrapper
 
 
-def send_message_all_managers(message: str, update: Update, context: CallbackContext) -> None:
+def send_message_all_managers(message: str,
+                              update: Update,
+                              context: CallbackContext) -> None:
     for manager_id in db.get_managers_telegram_ids():
         print(manager_id, type(manager_id))
         print(message, type(message))
@@ -150,8 +153,14 @@ def send_message_all_managers(message: str, update: Update, context: CallbackCon
             message
         )
 
+
 @delete_prev_inline
 def start(update: Update, context: CallbackContext) -> str:
+    context.bot.send_message(
+        update.effective_chat.id,
+        'Здравствуйте!',
+        reply_markup=ReplyKeyboardRemove()
+    )
     if not db.get_person(telegram_id=update.effective_chat.id):
         return hello_visitor(update=update, context=context)
     context.bot.send_message(
@@ -165,7 +174,7 @@ def start(update: Update, context: CallbackContext) -> str:
 @delete_prev_inline
 def check_access(update: Update, context: CallbackContext) -> str:
     _, claimed_role = update.callback_query.data.split(":::")
-    
+
     if claimed_role == 'contractor':
         if db.is_contractor(telegram_id=update.effective_chat.id):
             return contractor_main(update=update, context=context)
@@ -178,7 +187,7 @@ def check_access(update: Update, context: CallbackContext) -> str:
     elif claimed_role == 'client':
         return new_client(update=update, context=context)
     return 'VISITOR'
-    
+
 
 def subscription_alert(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
@@ -204,12 +213,14 @@ def hello_visitor(update: Update, context: CallbackContext) -> str:
             document=open('privacy_policy.pdf', 'rb'),
             caption=messages.HELLO_VISITOR,
             reply_markup=ReplyKeyboardMarkup(
-            [[KeyboardButton(
-                text=buttons.PHONENUMBER_REQUEST,
-                request_contact=True
-            )]],
-            resize_keyboard=True
-        )
+                [[
+                    KeyboardButton(
+                        text=buttons.PHONENUMBER_REQUEST,
+                        request_contact=True
+                    )
+                ]],
+                resize_keyboard=True
+            )
     )
     return 'VISITOR_PHONENUMBER'
 
@@ -237,10 +248,15 @@ def enter_phone(update: Update, context: CallbackContext) -> str:
             text=messages.invalid_number(phonenumber=update.message.text)
         )
         return 'VISITOR_PHONENUMBER'
-    
-    username = update.effective_chat.first_name or update.effective_chat.username \
+
+    username = update.effective_chat.first_name \
+        or update.effective_chat.username \
         or update.effective_chat.last_name
-    db.create_person(telegram_id=update.effective_chat.id, username=username, phonenumber=phonenumber)
+    db.create_person(
+        telegram_id=update.effective_chat.id,
+        username=username,
+        phonenumber=phonenumber
+    )
     context.bot.send_message(
             update.effective_chat.id,
             messages.REGISTRATION_COMPLETE,
@@ -263,6 +279,7 @@ def client_main(update: Update, context: CallbackContext) -> str:
         reply_markup=CLIENT_INLINE_KEYBOARD
     )
     return 'CLIENT'
+
 
 @delete_prev_inline
 @check_client_subscription
@@ -365,6 +382,7 @@ def add_order_comment(redis: Redis, update: Update, context: CallbackContext) ->
     )
     return 'CLIENT_NEW_COMMENT'
 
+
 @delete_prev_inline
 def client_comment_description(redis: Redis, update: Update, context: CallbackContext) -> str:
     if len(update.message.text) > 1000:
@@ -396,6 +414,7 @@ def client_comment_description(redis: Redis, update: Update, context: CallbackCo
     sleep(2)
     return client_main(update=update, context=context)
 
+
 @delete_prev_inline
 def add_order_complaint(redis: Redis, update: Update, context: CallbackContext) -> str:
     _, order_id = update.callback_query.data.split(':::')
@@ -406,6 +425,7 @@ def add_order_complaint(redis: Redis, update: Update, context: CallbackContext) 
         reply_markup=CANCEL_INLINE
     )
     return 'CLIENT_NEW_COMPLAINT'
+
 
 @delete_prev_inline
 def client_complaint_description(redis: Redis, update: Update, context: CallbackContext) -> str:
@@ -437,6 +457,7 @@ def client_complaint_description(redis: Redis, update: Update, context: Callback
     redis.delete(f'{update.effective_chat.id}_order_id')
     sleep(2)
     return client_main(update=update, context=context)
+
 
 @delete_prev_inline
 def send_contractor_contact(update: Update, context: CallbackContext) -> str:
@@ -485,7 +506,7 @@ def new_contractor_message(update: Update, context: CallbackContext) -> str:
             messages.TOO_MUCH_REQUEST_SYMBOLS
         )
         return 'NEW_CONTRACTOR'
-    
+
     contractor = db.create_contractor(
         telegram_id=update.effective_chat.id,
         comment=update.message.text
@@ -729,7 +750,7 @@ def tell_about_subscription(update: Update, context: CallbackContext) -> str:
 def activate_subscription(redis: Redis, update: Update, context: CallbackContext) -> str:
     _, tariff_id = update.callback_query.data.split(":")
     tariff = db.get_tariff(tariff_id=tariff_id)
-    payload=str(uuid4())
+    payload = str(uuid4())
     redis.set(payload, tariff_id)
     redis.set(f'{payload}_user_id', update.effective_chat.id)
     context.bot.send_invoice(
@@ -744,7 +765,7 @@ def activate_subscription(redis: Redis, update: Update, context: CallbackContext
         ]
     )
     return 'SUBSCRIPTION'
-    
+
 
 def confirm_payment(redis: Redis, update: Update, context: CallbackContext) -> None:
     context.bot.answer_pre_checkout_query(
@@ -764,11 +785,12 @@ def confirm_payment(redis: Redis, update: Update, context: CallbackContext) -> N
     manager_message = dedent(
         f"""
         NEW SUBSCRIPTION
-        
+
         {subscription}
         """
     )
     send_message_all_managers(message=manager_message, update=update, context=context)
+
 
 @delete_prev_inline
 def cancel_new_contractor(update: Update, context: CallbackContext) -> str:
@@ -794,13 +816,14 @@ class Command(BaseCommand):
         updater = Updater(token=env.str('TELEGRAM_BOT_TOKEN'), use_context=True)
         redis = Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
-        
         updater.dispatcher.add_handler(
             ConversationHandler(
-                entry_points = [
-                    CommandHandler('start', start)
+                entry_points=[
+                    CommandHandler('start', start),
+                    MessageHandler(filters=Filters.all, callback=start),
+                    CallbackQueryHandler(callback=start)
                 ],
-                states = {
+                states={
                     'VISITOR': [
                         CommandHandler('start', start),
                         CallbackQueryHandler(check_access, pattern=buttons.CHECK_ACCESS_CALLBACK),
@@ -870,18 +893,11 @@ class Command(BaseCommand):
                         CallbackQueryHandler(contractor_main, pattern=buttons.BACK_TO_CONTRACTOR_MAIN['callback_data']),
                         MessageHandler(filters=Filters.text, callback=partial(contractor_enter_estimate_datetime, redis)),
                     ],
-                    'MANAGER': [
-
-                    ],
-                    'ADMIN': [
-
-                    ]
                 },
-                fallbacks = [],
-
+                fallbacks=[],
             )
         )
-        
+
         updater.dispatcher.add_handler(PreCheckoutQueryHandler(partial(confirm_payment, redis)))
 
         updater.start_polling()
