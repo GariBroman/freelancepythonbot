@@ -867,21 +867,25 @@ class Command(BaseCommand):
                         CallbackQueryHandler(client_main, pattern=buttons.BACK_TO_CLIENT_MAIN['callback_data']),
                     ],
                     'CLIENT_NEW_REQUEST': [
+                        CommandHandler('start', start),
                         MessageHandler(filters=Filters.text, callback=client_request_description),
                         CallbackQueryHandler(client_main, pattern=buttons.CANCEL['callback_data']),
 
                     ],
                     'CLIENT_NEW_COMMENT': [
+                        CommandHandler('start', start),
                         MessageHandler(filters=Filters.text, callback=partial(client_comment_description, redis)),
                         CallbackQueryHandler(client_main, pattern=buttons.CANCEL['callback_data']),
 
                     ],
                     'CLIENT_NEW_COMPLAINT': [
+                        CommandHandler('start', start),
                         MessageHandler(filters=Filters.text, callback=partial(client_complaint_description, redis)),
                         CallbackQueryHandler(client_main, pattern=buttons.CANCEL['callback_data']),
 
                     ],
                     'CONTRACTOR': [
+                        CommandHandler('start', start),
                         CallbackQueryHandler(start, pattern=buttons.CHANGE_ROLE['callback_data']),
                         CallbackQueryHandler(contractor_display_orders, pattern=buttons.CONTRACTOR_CURRENT_ORDERS['callback_data']),
                         CallbackQueryHandler(contractor_display_orders, pattern=buttons.CONTRACTOR_AVAILABLE_ORDERS['callback_data']),
@@ -894,6 +898,7 @@ class Command(BaseCommand):
                         CallbackQueryHandler(contractor_main, pattern=buttons.BACK_TO_CONTRACTOR_MAIN['callback_data']),
                     ],
                     'CONTACTOR_SET_ESTIMATE_DATETIME': [
+                        CommandHandler('start', start),
                         CallbackQueryHandler(contractor_main, pattern=buttons.BACK_TO_CONTRACTOR_MAIN['callback_data']),
                         MessageHandler(filters=Filters.text, callback=partial(contractor_enter_estimate_datetime, redis)),
                     ],
