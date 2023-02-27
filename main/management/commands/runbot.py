@@ -827,7 +827,7 @@ class Command(BaseCommand):
                     'VISITOR': [
                         CommandHandler('start', start),
                         CallbackQueryHandler(check_access, pattern=buttons.CHECK_ACCESS_CALLBACK),
-
+                        CallbackQueryHandler(start, pattern=buttons.CHANGE_ROLE['callback_data']),
                         CallbackQueryHandler(new_client, pattern=buttons.NEW_CLIENT['callback_data']),
                         CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
                     ],
