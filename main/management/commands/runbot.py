@@ -56,11 +56,11 @@ START_INLINE = InlineKeyboardMarkup(
 )
 
 
-VISITOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
+BECOME_CONTRACTOR_INLINE = InlineKeyboardMarkup(
     [
         [
-            InlineKeyboardButton(**buttons.NEW_CLIENT),
-            InlineKeyboardButton(**buttons.NEW_CONTRACTOR)
+            InlineKeyboardButton(**buttons.NEW_CONTRACTOR),
+            InlineKeyboardButton(**buttons.CHANGE_ROLE)
         ]
 
     ]
@@ -173,7 +173,7 @@ def check_access(update: Update, context: CallbackContext) -> str:
             context.bot.send_message(
                 update.effective_chat.id,
                 text=messages.NOT_CONTRACTOR,
-                reply_markup=START_INLINE
+                reply_markup=BECOME_CONTRACTOR_INLINE
             )
     elif claimed_role == 'client':
         return new_client(update=update, context=context)
@@ -512,7 +512,7 @@ def new_contractor_message(update: Update, context: CallbackContext) -> str:
         update.effective_chat.id,
         text=messages.NEW_CONTRACTOR_CREATED
     )
-    return new_client(update=update, context=context)
+    return start(update=update, context=context)
 
 
 @delete_prev_inline
@@ -785,7 +785,7 @@ def cancel_new_contractor(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.OK,
-        reply_markup=VISITOR_INLINE_KEYBOARD
+        reply_markup=BECOME_CONTRACTOR_INLINE
     )
     if role:
         return role.upper()
@@ -830,7 +830,7 @@ class Command(BaseCommand):
                     ],
                     'NEW_CONTRACTOR': [
                         CommandHandler('start', start),
-                        CallbackQueryHandler(new_client, pattern=buttons.CANCEL['callback_data']),
+                        CallbackQueryHandler(start, pattern=buttons.CANCEL['callback_data']),
                         MessageHandler(Filters.text, new_contractor_message)
                     ],
                     'CLIENT': [
