@@ -618,16 +618,17 @@ def contractor_take_order(update: Update, context: CallbackContext) -> str:
     _, order_id = update.callback_query.data.split(':::')
     manager_message = dedent(
         f"""
-        CONTRACTOR want TAKE ORDER
+        CONTRACTOR TAKE ORDER
         contractor_id: {update.effective_chat.id}
 
         order_id: {order_id}
         """
     )
+    db.set_order_contractor(telegram_id=update.effective_chat.id, order_id=order_id)
     send_message_all_managers(message=manager_message, update=update, context=context)
     context.bot.send_message(
         update.effective_chat.id,
-        text='Заявка отплавлена, ожидайте.'
+        text='Заказ ваш!'
     )
     return contractor_main(update=update, context=context)
 
@@ -668,31 +669,34 @@ def contractor_set_estimate_datetime(redis: Redis, update: Update, context: Call
 def contractor_enter_estimate_datetime(redis: Redis, update: Update, context: CallbackContext) -> str:
     separators = '[:,. ]'
     datetime_regex = r'\d{4}[:,. ]\d{2}[:,. ]\d{2}[:,. ]\d{2}[:,. ]\d{2}'
-    if not re.match(datetime_regex, update.message.text):
+    try:
+        if not re.match(datetime_regex, update.message.text):
+            raise ValueError
+        year, month, day, hour, minute = re.split(separators, update.message.text)
+         # here can be ValueError
+        estimate_datetime = make_aware(
+            datetime(int(year), int(month), int(day), int(hour), int(minute), 0, 0)
+        )
+        order_id = redis.get(f'{update.effective_chat.id}_contractor_order_id')
+        order = db.set_estimate_datetime(order_id=int(order_id), estimate_datetime=estimate_datetime)
+        manager_message = dedent(
+            f"""
+            CONTRACTOR SET ORDER estimate datetime
+            {estimate_datetime.strftime("%d.%m.%Y %H:%M")}
+
+            order: {order}
+            """
+        )
+        send_message_all_managers(message=manager_message, update=update, context=context)
+        redis.delete(f'{update.effective_chat.id}_contractor_order_id')
+        return contractor_main(update=update, context=context)
+    except ValueError:
         context.bot.send_message(
             update.effective_chat.id,
             messages.SET_ESTIMATE_DATETIME,
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(**buttons.BACK_TO_CONTRACTOR_MAIN)]])
         )
         return 'CONTACTOR_SET_ESTIMATE_DATETIME'
-    year, month, day, hour, minute = re.split(separators, update.message.text)
-    estimate_datetime = make_aware(
-        datetime(int(year), int(month), int(day), int(hour), int(minute), 0, 0)
-    )
-    order_id = redis.get(f'{update.effective_chat.id}_contractor_order_id')
-    order = db.set_estimate_datetime(order_id=int(order_id), estimate_datetime=estimate_datetime)
-    manager_message = dedent(
-        f"""
-        CONTRACTOR SET ORDER estimate datetime
-        {estimate_datetime.strftime("%d.%m.%Y %H:%M")}
-
-        order: {order}
-        """
-    )
-    send_message_all_managers(message=manager_message, update=update, context=context)
-    redis.delete(f'{update.effective_chat.id}_contractor_order_id')
-    return contractor_main(update=update, context=context)
-
 
 @delete_prev_inline
 def contractor_display_salary(update: Update, context: CallbackContext) -> str:

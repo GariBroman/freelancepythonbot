@@ -250,6 +250,11 @@ def close_order(order_id: int) -> None:  # TODO return ссылка на зак�
     order.finished_at = now()
     order.save()
 
+def set_order_contractor(telegram_id: int, order_id: int) -> None:
+    order = main_models.Order.objects.get(id=order_id)
+    contractor = get_contractor(telegram_id=telegram_id)
+    order.contractor = contractor
+    order.save()
 
 def get_managers_telegram_ids() -> tuple[int]:
     managers = main_models.Manager.objects.filter(active=True)

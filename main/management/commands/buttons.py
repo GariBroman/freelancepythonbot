@@ -56,4 +56,4 @@ ORDER_COMPLAINT = {'text': 'Есть претензия', 'callback_data': 'comp
 
 PHONENUMBER_REQUEST = 'Поделиться номером'
 
-TAKE_ORDER = {'text': 'Подать заявку на выполнение', 'callback_data': 'take_order'}
+TAKE_ORDER = {'text': 'Взять заказ в работу', 'callback_data': 'take_order'}
