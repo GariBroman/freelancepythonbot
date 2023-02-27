@@ -166,25 +166,7 @@ def start(update: Update, context: CallbackContext) -> str:
 def check_access(update: Update, context: CallbackContext) -> str:
     _, claimed_role = update.callback_query.data.split(":::")
     
-    if claimed_role == 'owner':
-        if db.is_admin(telegram_id=update.effective_chat.id):
-            return hello_admin(update=update, context=context)
-        else:
-            context.bot.send_message(
-                update.effective_chat.id,
-                text=messages.NOT_ADMIN,
-                reply_markup=START_INLINE
-            )
-    elif claimed_role == 'manager':
-        if db.is_manager(telegram_id=update.effective_chat.id):
-            return hello_manager(update=update, context=context)
-        else:
-            context.bot.send_message(
-                update.effective_chat.id,
-                text=messages.NOT_MANAGER,
-                reply_markup=START_INLINE
-            )
-    elif claimed_role == 'contractor':
+    if claimed_role == 'contractor':
         if db.is_contractor(telegram_id=update.effective_chat.id):
             return contractor_main(update=update, context=context)
         else:
@@ -352,7 +334,7 @@ def display_current_orders(update: Update, context: CallbackContext) -> str:
 @delete_prev_inline
 def display_order(update: Update, context: CallbackContext) -> str:
     _, order_id = update.callback_query.data.split(':::')
-    order = db.get_order(telegram_id=update.effective_chat.id, order_id=order_id)
+    order = db.get_order(telegram_id=update.effective_chat.id, order_id=int(order_id))
     order_buttons = [
         [InlineKeyboardButton(
             text=buttons.ORDER_COMMENT['text'],
@@ -403,7 +385,7 @@ def client_comment_description(redis: Redis, update: Update, context: CallbackCo
         return 'CLIENT_NEW_COMMENT'
     order_id = redis.get(f'{update.effective_chat.id}_order_id')
     order, comment = db.create_comment_from_client(
-        order_id=order_id,
+        order_id=int(order_id),
         comment=update.message.text
     )
     manager_message = dedent(
@@ -445,7 +427,7 @@ def client_complaint_description(redis: Redis, update: Update, context: Callback
         return 'CLIENT_NEW_COMPLAINT'
     order_id = redis.get(f'{update.effective_chat.id}_order_id')
     order, complaint = db.create_client_order_complaint(
-        order_id=order_id,
+        order_id=int(order_id),
         complaint=update.message.text
     )
     manager_message = dedent(
@@ -469,7 +451,7 @@ def client_complaint_description(redis: Redis, update: Update, context: Callback
 def send_contractor_contact(update: Update, context: CallbackContext) -> str:
     _, order_id = update.callback_query.data.split(':::')
     try:
-        contractor_contact_meta = db.get_order_contractor_contact(order_id=order_id)
+        contractor_contact_meta = db.get_order_contractor_contact(order_id=int(order_id))
         context.bot.send_contact(
             chat_id=update.effective_chat.id,
             contact=Contact(**contractor_contact_meta),
@@ -488,8 +470,9 @@ def send_current_tariff(update: Update, context: CallbackContext) -> str:
     client_tariff_info = db.get_client_subscription_info(telegram_id=update.effective_chat.id)
     context.bot.send_message(
         update.effective_chat.id,
-        text=client_tariff_info
+        text=client_tariff_info or 'У вас нет активных подписок'
     )
+    sleep(2)
     return client_main(update=update, context=context)
 
 
@@ -612,7 +595,7 @@ def contractor_display_order(update: Update, context: CallbackContext) -> str:
     order_buttons.append([InlineKeyboardButton(**buttons.BACK_TO_CONTRACTOR_MAIN)])
     context.bot.send_message(
         update.effective_chat.id,
-        db.display_order_info(order_id=order_id),
+        db.display_order_info(order_id=int(order_id)),
         reply_markup=InlineKeyboardMarkup(order_buttons)
     )
     return 'CONTRACTOR'
@@ -640,7 +623,7 @@ def contractor_take_order(update: Update, context: CallbackContext) -> str:
 @delete_prev_inline
 def contractor_finish_order(update: Update, context: CallbackContext) -> str:
     _, order_id = update.callback_query.data.split(':::')
-    db.close_order(order_id=order_id)
+    db.close_order(order_id=int(order_id))
     manager_message = dedent(
         f"""
         CONTRACTOR closed ORDER
@@ -685,7 +668,7 @@ def contractor_enter_estimate_datetime(redis: Redis, update: Update, context: Ca
         datetime(int(year), int(month), int(day), int(hour), int(minute), 0, 0)
     )
     order_id = redis.get(f'{update.effective_chat.id}_contractor_order_id')
-    order = db.set_estimate_datetime(order_id=order_id, estimate_datetime=estimate_datetime)
+    order = db.set_estimate_datetime(order_id=int(order_id), estimate_datetime=estimate_datetime)
     manager_message = dedent(
         f"""
         CONTRACTOR SET ORDER estimate datetime
