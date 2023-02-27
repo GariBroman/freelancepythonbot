@@ -4,7 +4,6 @@ from functools import partial
 from time import sleep
 import re
 import os
-from unittest.util import strclass
 from uuid import uuid4
 
 from django.core.management.base import BaseCommand
@@ -49,10 +48,10 @@ START_INLINE = InlineKeyboardMarkup(
             InlineKeyboardButton(**buttons.I_AM_CLIENT),
             InlineKeyboardButton(**buttons.I_AM_CONTACTOR)
         ],
-        [
-            InlineKeyboardButton(**buttons.I_AM_MANAGER),
-            InlineKeyboardButton(**buttons.I_AM_OWNER)
-        ],
+        # [
+        #     InlineKeyboardButton(**buttons.I_AM_MANAGER),
+        #     InlineKeyboardButton(**buttons.I_AM_OWNER)
+        # ],
     ]
 )
 
@@ -141,6 +140,15 @@ def check_available_request(func, *args, **kwargs):
             return available_requests_alert(update=update, context=context)
     return wrapper
 
+
+def send_message_all_managers(message: str, update: Update, context: CallbackContext) -> None:
+    for manager_id in db.get_managers_telegram_ids():
+        print(manager_id, type(manager_id))
+        print(message, type(message))
+        context.bot.send_message(
+            manager_id,
+            message
+        )
 
 @delete_prev_inline
 def start(update: Update, context: CallbackContext) -> str:
@@ -256,7 +264,7 @@ def enter_phone(update: Update, context: CallbackContext) -> str:
             messages.REGISTRATION_COMPLETE,
             reply_markup=ReplyKeyboardRemove()
         )
-    return new_visitor_role(update=update, context=context)
+    return start(update=update, context=context)
 
 @delete_prev_inline
 def new_visitor_role(update: Update, context: CallbackContext) -> str:
@@ -271,11 +279,11 @@ def new_visitor_role(update: Update, context: CallbackContext) -> str:
 @delete_prev_inline
 def new_client(update: Update, context: CallbackContext) -> str:
     db.create_client(telegram_id=update.effective_chat.id)
-    return hello_client(update=update, context=context)
+    return client_main(update=update, context=context)
 
 
 @delete_prev_inline
-def hello_client(update: Update, context: CallbackContext) -> str:
+def client_main(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.CLIENT_MAIN,
@@ -307,17 +315,17 @@ def client_request_description(update: Update, context: CallbackContext) -> str:
         )
         return 'CLIENT_NEW_REQUEST'
 
-    db.create_order(
+    order = db.create_order(
         telegram_id=update.effective_chat.id,
         description=update.message.text
     )
-
+    send_message_all_managers(message=f'NEW_ORDER\n\n{order}', update=update, context=context)
     context.bot.send_message(
         update.effective_chat.id,
         messages.SUCCESS_REQUEST
     )
     sleep(2)
-    return hello_client(update=update, context=context)
+    return client_main(update=update, context=context)
 
 
 @delete_prev_inline
@@ -394,17 +402,26 @@ def client_comment_description(redis: Redis, update: Update, context: CallbackCo
         )
         return 'CLIENT_NEW_COMMENT'
     order_id = redis.get(f'{update.effective_chat.id}_order_id')
-    db.create_comment_from_client(
+    order, comment = db.create_comment_from_client(
         order_id=order_id,
         comment=update.message.text
     )
+    manager_message = dedent(
+        f"""
+        NEW COMMENT
+        order: {order}
+
+        comment: {comment}
+        """
+    )
+    send_message_all_managers(message=manager_message, update=update, context=context)
     context.bot.send_message(
         update.effective_chat.id,
         messages.SUCCESS_COMMENT
     )
     redis.delete(f'{update.effective_chat.id}_order_id')
     sleep(2)
-    return hello_client(update=update, context=context)
+    return client_main(update=update, context=context)
 
 @delete_prev_inline
 def add_order_complaint(redis: Redis, update: Update, context: CallbackContext) -> str:
@@ -427,17 +444,26 @@ def client_complaint_description(redis: Redis, update: Update, context: Callback
         )
         return 'CLIENT_NEW_COMPLAINT'
     order_id = redis.get(f'{update.effective_chat.id}_order_id')
-    db.create_client_order_complaint(
+    order, complaint = db.create_client_order_complaint(
         order_id=order_id,
         complaint=update.message.text
     )
+    manager_message = dedent(
+        f"""
+        NEW COMPLAINT
+        order: {order}
+
+        comment: {complaint}
+        """
+    )
+    send_message_all_managers(message=manager_message, update=update, context=context)
     context.bot.send_message(
         update.effective_chat.id,
         messages.SUCCESS_COMPLAINT
     )
     redis.delete(f'{update.effective_chat.id}_order_id')
     sleep(2)
-    return hello_client(update=update, context=context)
+    return client_main(update=update, context=context)
 
 @delete_prev_inline
 def send_contractor_contact(update: Update, context: CallbackContext) -> str:
@@ -464,7 +490,7 @@ def send_current_tariff(update: Update, context: CallbackContext) -> str:
         update.effective_chat.id,
         text=client_tariff_info
     )
-    return hello_client(update=update, context=context)
+    return client_main(update=update, context=context)
 
 
 @delete_prev_inline
@@ -486,10 +512,19 @@ def new_contractor_message(update: Update, context: CallbackContext) -> str:
         )
         return 'NEW_CONTRACTOR'
     
-    db.create_contractor(
+    contractor = db.create_contractor(
         telegram_id=update.effective_chat.id,
         comment=update.message.text
     )
+    manager_message = dedent(
+        f"""
+        NEW CONTRACTOR REQUEST
+        contractor: {contractor}
+
+        request: {update.message.text}
+        """
+    )
+    send_message_all_managers(message=manager_message, update=update, context=context)
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.NEW_CONTRACTOR_CREATED
@@ -586,12 +621,15 @@ def contractor_display_order(update: Update, context: CallbackContext) -> str:
 @delete_prev_inline
 def contractor_take_order(update: Update, context: CallbackContext) -> str:
     _, order_id = update.callback_query.data.split(':::')
-    db.close_order(order_id=order_id)
-    for manager_id in db.get_managers_telegram_ids():
-        context.bot.send_message(
-            manager_id,
-            text='Contractor "{update.effective_chat.id}" want take order "{order_id}"'
-        )
+    manager_message = dedent(
+        f"""
+        CONTRACTOR want TAKE ORDER
+        contractor_id: {update.effective_chat.id}
+
+        order_id: {order_id}
+        """
+    )
+    send_message_all_managers(message=manager_message, update=update, context=context)
     context.bot.send_message(
         update.effective_chat.id,
         text='Заявка отплавлена, ожидайте.'
@@ -603,11 +641,15 @@ def contractor_take_order(update: Update, context: CallbackContext) -> str:
 def contractor_finish_order(update: Update, context: CallbackContext) -> str:
     _, order_id = update.callback_query.data.split(':::')
     db.close_order(order_id=order_id)
-    for manager_id in db.get_managers_telegram_ids():
-        context.bot.send_message(
-            manager_id,
-            text='Contractor "{update.effective_chat.id}" closed order "{order_id}"'
-        )
+    manager_message = dedent(
+        f"""
+        CONTRACTOR closed ORDER
+        contractor_id: {update.effective_chat.id}
+
+        request: {order_id}
+        """
+    )
+    send_message_all_managers(message=manager_message, update=update, context=context)
     context.bot.send_message(
         update.effective_chat.id,
         text='Заказ закрыт'
@@ -642,9 +684,17 @@ def contractor_enter_estimate_datetime(redis: Redis, update: Update, context: Ca
     estimate_datetime = make_aware(
         datetime(int(year), int(month), int(day), int(hour), int(minute), 0, 0)
     )
-    print(estimate_datetime)
     order_id = redis.get(f'{update.effective_chat.id}_contractor_order_id')
-    db.set_estimate_datetime(order_id=order_id, estimate_datetime=estimate_datetime)
+    order = db.set_estimate_datetime(order_id=order_id, estimate_datetime=estimate_datetime)
+    manager_message = dedent(
+        f"""
+        CONTRACTOR SET ORDER estimate datetime
+        {estimate_datetime.strftime("%d.%m.%Y %H:%M")}
+
+        order: {order}
+        """
+    )
+    send_message_all_managers(message=manager_message, update=update, context=context)
     redis.delete(f'{update.effective_chat.id}_contractor_order_id')
     return contractor_main(update=update, context=context)
 
@@ -657,28 +707,6 @@ def contractor_display_salary(update: Update, context: CallbackContext) -> str:
         reply_markup=CONTRACTOR_INLINE_KEYBOARD
     )
     return 'CONTRACTOR'
-
-
-@delete_prev_inline
-def hello_admin(update: Update, context: CallbackContext) -> str:
-    #TODO
-    context.bot.send_message(
-        update.effective_chat.id,
-        'Поздравляю, вы админ. Но мне пофиг, раздел бота не дописан!',
-        reply_markup=START_INLINE
-    )
-    return 'VISITOR'
-
-
-@delete_prev_inline
-def hello_manager(update: Update, context: CallbackContext) -> str:
-    #TODO
-    context.bot.send_message(
-        update.effective_chat.id,
-        'Поздравляю, вы менеджер. Но мне пофиг, раздел бота не дописан!',
-        reply_markup=START_INLINE
-    )
-    return 'VISITOR'
 
 
 @delete_prev_inline
@@ -754,11 +782,19 @@ def confirm_payment(redis: Redis, update: Update, context: CallbackContext) -> N
     redis.delete(payload)
     telegram_id = redis.get(f'{payload}_user_id')
     redis.delete(f'{payload}_user_id')
-    db.create_subscription(
+    subscription = db.create_subscription(
         telegram_id=telegram_id,
         tariff_id=tariff_id,
         payment_id=payload
     )
+    manager_message = dedent(
+        f"""
+        NEW SUBSCRIPTION
+        
+        {subscription}
+        """
+    )
+    send_message_all_managers(message=manager_message, update=update, context=context)
 
 @delete_prev_inline
 def cancel_new_contractor(update: Update, context: CallbackContext) -> str:
@@ -807,7 +843,7 @@ class Command(BaseCommand):
                         CallbackQueryHandler(partial(activate_subscription, redis), pattern='activate_subscription'),
                         CallbackQueryHandler(new_visitor_role, pattern=buttons.CANCEL['callback_data']),
                         PreCheckoutQueryHandler(partial(confirm_payment, redis)),
-                        MessageHandler(Filters.successful_payment, hello_client)
+                        MessageHandler(Filters.successful_payment, client_main)
                     ],
                     'NEW_CONTRACTOR': [
                         CommandHandler('start', start),
@@ -825,23 +861,23 @@ class Command(BaseCommand):
                         CallbackQueryHandler(send_contractor_contact, pattern=buttons.CONTRACTOR_CONTACTS['callback_data']),
                         CallbackQueryHandler(send_current_tariff, pattern=buttons.CLIENT_CURRENT_TARIFF['callback_data']),
                         CallbackQueryHandler(new_contractor, pattern=buttons.NEW_CONTRACTOR['callback_data']),
-                        CallbackQueryHandler(hello_client, pattern=buttons.CANCEL['callback_data']),
+                        CallbackQueryHandler(client_main, pattern=buttons.CANCEL['callback_data']),
                         CallbackQueryHandler(tell_about_subscription, pattern=buttons.CREATE_SUBSCRIPTION['callback_data']),
-                        CallbackQueryHandler(hello_client, pattern=buttons.BACK_TO_CLIENT_MAIN['callback_data']),
+                        CallbackQueryHandler(client_main, pattern=buttons.BACK_TO_CLIENT_MAIN['callback_data']),
                     ],
                     'CLIENT_NEW_REQUEST': [
                         MessageHandler(filters=Filters.text, callback=client_request_description),
-                        CallbackQueryHandler(hello_client, pattern=buttons.CANCEL['callback_data']),
+                        CallbackQueryHandler(client_main, pattern=buttons.CANCEL['callback_data']),
 
                     ],
                     'CLIENT_NEW_COMMENT': [
                         MessageHandler(filters=Filters.text, callback=partial(client_comment_description, redis)),
-                        CallbackQueryHandler(hello_client, pattern=buttons.CANCEL['callback_data']),
+                        CallbackQueryHandler(client_main, pattern=buttons.CANCEL['callback_data']),
 
                     ],
                     'CLIENT_NEW_COMPLAINT': [
                         MessageHandler(filters=Filters.text, callback=partial(client_complaint_description, redis)),
-                        CallbackQueryHandler(hello_client, pattern=buttons.CANCEL['callback_data']),
+                        CallbackQueryHandler(client_main, pattern=buttons.CANCEL['callback_data']),
 
                     ],
                     'CONTRACTOR': [

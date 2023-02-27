@@ -1,7 +1,7 @@
 from django.utils.timezone import datetime, timedelta, now
 from typing import Any
 from main import models as main_models
-from django.db.models import QuerySet, F
+from django.db.models import QuerySet, Sum
 
 import main.management.commands.messages as messages
 
@@ -72,10 +72,10 @@ def create_client(telegram_id: str) -> None:
     main_models.Client.objects.get_or_create(person=person)
 
 
-def create_contractor(telegram_id: str, comment: str) -> None:
+def create_contractor(telegram_id: str, comment: str) -> main_models.Contractor:
     person = main_models.Person.objects.get(telegram_id=telegram_id)
-    main_models.Contractor.objects.get_or_create(person=person, comment=comment)
-
+    contractor = main_models.Contractor.objects.get_or_create(person=person, comment=comment)
+    return contractor
 
 def get_client(telegram_id: str):
     return main_models.Client.objects.get(person__telegram_id=telegram_id)
@@ -97,14 +97,6 @@ def is_actual_subscription(telegram_id: str) -> bool:
         return False
 
 
-def is_client_phone(telegram_id: str) -> bool:  # TODO !!!Может обозвать is_person_phone()?
-    # запрос приходит когда клиента вообще еще нет в базе пока закомментировал
-    # person = main_models.Person.objects.get(telegram_id=telegram_id)
-    #
-    # return True if person.phone else False
-    pass
-
-
 def update_client_phone(telegram_id: str,
                         phonenumber: str) -> None:
 
@@ -119,24 +111,25 @@ def get_tariff(tariff_id: str):
     return main_models.Tariff.objects.get(id=int(tariff_id))
 
 
-def create_subscription(telegram_id: str, tariff_id: str, payment_id: str):
+def create_subscription(telegram_id: str, tariff_id: str, payment_id: str) -> main_models.ClientSubscription:
     client = main_models.Client.objects.get(person__telegram_id=telegram_id)
     tariff = main_models.Tariff.objects.get(id=tariff_id)
 
-    main_models.ClientSubscription.objects.create(
+    subscription = main_models.ClientSubscription.objects.create(
         client=client,
         tariff=tariff,
         payment_id=payment_id
     )
+    return subscription
 
-
-def create_order(telegram_id: str, description: str):
+def create_order(telegram_id: str, description: str) -> main_models.Order:
     subscription = main_models.Client.objects.get(person__telegram_id=telegram_id).subscriptions.last()
 
-    main_models.Order.objects.create(
+    order = main_models.Order.objects.create(
         subscription=subscription,
         description=description
     )
+    return order
 
 
 def get_current_client_orders(telegram_id: int) -> list[dict]:
@@ -171,14 +164,15 @@ def can_see_contractor_contacts(telegram_id: int) -> bool:
         return subscription.tariff.contractor_contacts_availability
 
 
-def create_comment_from_client(order_id, comment: str):
+def create_comment_from_client(order_id,
+                               comment: str) -> tuple[main_models.Order, main_models.OrderComments]:
     order = main_models.Order.objects.get(id=order_id)
-    main_models.OrderComments.objects.create(
+    comment = main_models.OrderComments.objects.create(
         order=order,
         author='client',
         comment=comment
     )
-
+    return order, comment
 
 def create_comment_from_contractor(order_id, comment: str):
     order = main_models.Order.objects.get(id=order_id)
@@ -200,12 +194,13 @@ def get_order_contractor_contact(order_id: str) -> dict:
     }
 
 
-def create_client_order_complaint(order_id: int, complaint: str) -> None:
+def create_client_order_complaint(order_id: int, complaint: str) -> tuple[main_models.Order, main_models.Complaint]:
     order = main_models.Order.objects.get(id=order_id)
-    main_models.Complaint.objects.create(
+    complaint = main_models.Complaint.objects.create(
         order=order,
         complaint=complaint
     )
+    return order, complaint
 
 
 def get_contractor_current_orders(telegram_id: str) -> list[dict[str, Any], ...]:
@@ -247,10 +242,11 @@ def display_order_info(order_id: int) -> str:
     return order.display()
 
 
-def set_estimate_datetime(order_id: int, estimate_datetime: datetime) -> None:
+def set_estimate_datetime(order_id: int, estimate_datetime: datetime) -> main_models.Order:
     order = main_models.Order.objects.get(id=order_id)
     order.estimated_time=estimate_datetime
     order.save()
+    return order
 
 
 def close_order(order_id: int) -> None: # TODO return ссылка на заказ в админке!
