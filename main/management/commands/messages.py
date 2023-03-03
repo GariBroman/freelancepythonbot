@@ -1,7 +1,12 @@
 from textwrap import dedent
-import main.management.commands.buttons as buttons
-# Просьба сохранять алфавитный порядок
 
+from django.db.models import QuerySet
+
+import main.management.commands.buttons as buttons
+
+from main import models as main_models
+
+APPROVE_ORDER_CONTRACTOR = 'Заказ ваш!'
 
 CHECK_ROLE = 'Укажите кто вы.'
 
@@ -53,6 +58,12 @@ NEW_CONTRACTOR_CREATED = dedent(
     """
 )
 
+NO_ACTIVE_ORDERS = 'У вас нет активных заказов'
+
+NO_ACTIVE_SUBSCRIPTIONS = 'У вас нет активных подписок'
+
+NO_AVAILABLE_ORDERS = 'У вас нет доступных заказов'
+
 NO_AVAILABLE_REQUESTS = dedent(
     """
     ❌ Похоже что вы достилги лимита заявок по вашей подписке.
@@ -68,6 +79,8 @@ NOT_CONTRACTOR = dedent(
 )
 
 OK = 'Как скажете'
+
+ORDER_CLOSED = 'Заказ закрыт'
 
 REGISTRATION_COMPLETE = 'Вы успешно зарегистрировались'
 
@@ -97,7 +110,6 @@ TOO_MUCH_REQUEST_SYMBOLS = dedent(
 WELCOME = "Добро пожаловать! 🤗"
 
 
-
 def invalid_number(phonenumber: str) -> str:
     return dedent(
         f'''
@@ -108,3 +120,128 @@ def invalid_number(phonenumber: str) -> str:
         ВНИМАНИЕ! Регистрация является обязательным условием использования сервиса.
         '''
     )
+
+
+def tell_about_subscription(tariffs: QuerySet) -> str:
+    message = "Давайте расскажу про наши тарифные планы:\n"
+    for tariff in tariffs:
+        message += dedent(
+                f"""
+                {tariff.title}:
+                {tariff.orders_limit} заявок в месяц.
+
+                Время ответа на заявку: {tariff.display_answer_delay()}
+                """
+        )
+        if tariff.personal_contractor_available:
+            message += dedent(
+                """
+                Возможность закрепить за собой подрядчика.
+                """
+            )
+        if tariff.contractor_contacts_availability:
+            message += dedent(
+                """
+                Возможность увидеть контакты подрядчика.
+                """
+            )
+    return message
+
+
+def new_order_notification(order: str) -> str:
+    return dedent(
+        f"""
+        NEW ORDER
+
+        {order}
+        """
+    )
+
+
+def new_subscription_notification(subscription: main_models.ClientSubscription) -> str:
+    return dedent(
+        f"""
+        NEW SUBSCRIPTION
+
+        {subscription}
+        """
+    )
+
+
+def new_client_comment_notification(order: main_models.Order, comment: main_models.OrderComments) -> str:
+    return dedent(
+        f"""
+        NEW COMMENT
+        order: {order}
+
+        comment: {comment}
+        """
+    )
+
+
+def new_client_complaint_notification(order: main_models.Order, complaint: main_models.Complaint) -> str:
+    return dedent(
+        f"""
+        NEW COMPLAINT
+        order: {order}
+
+        comment: {complaint}
+        """
+    )
+
+
+def new_contractor_notification(contractor: main_models.Contractor, message: str) -> str:
+    return dedent(
+        f"""
+        NEW CONTRACTOR
+        contractor: {contractor}
+
+        request: {message}
+        """
+    )
+
+def contractor_took_order_notification(order: main_models.Order) -> str:
+    return dedent(
+        f"""
+        CONTRACTOR TAKE ORDER
+        contractor: {order.contractor}
+
+        order_id: {order}
+        """
+    )
+
+def contractor_finished_order_notification(order: main_models.Order) -> str:
+    return dedent(
+        f"""
+        CONTRACTOR closed ORDER
+        contractor: {order.contractor}
+
+        request: {order}
+        """
+    )
+
+def contractor_set_estimate_datetime_notifiction(order: main_models.Order) -> str:
+    return dedent(
+        f"""
+        CONTRACTOR SET ORDER estimate datetime
+        {order.estimated_time.strftime("%d.%m.%Y %H:%M")}
+
+        order: {order}
+        """
+    )
+
+def display_orders(orders: QuerySet,
+                   are_current: bool = False,
+                   are_available: bool = False,
+                   enumerate_start: int = 1) -> str:
+    message = 'Ваши текущие заказы:' if are_current == True else \
+        'Доступные вам заказы:' if are_available == True else \
+        'Ваши заказы:'
+    for num, order in enumerate(orders, start=enumerate_start):
+        message += dedent(
+            f'''
+            Заказ {num}.
+            {order.display()}
+            '''
+        )
+    return message
