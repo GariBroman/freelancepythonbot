@@ -1,9 +1,10 @@
-from contextlib import suppress
-from textwrap import dedent
-from functools import partial
-from time import sleep
-import re
 import os
+import re
+
+from contextlib import suppress
+from functools import partial
+from textwrap import dedent
+from time import sleep
 from uuid import uuid4
 
 from django.core.management.base import BaseCommand
@@ -16,12 +17,8 @@ from phonenumber_field.validators import (
 )
 from redis import Redis
 from telegram import (
-    ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
-    KeyboardButton,
     Update,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
     LabeledPrice,
     Contact
 )
@@ -40,64 +37,7 @@ from telegram.ext import (
 import main.management.commands.db_processing as db
 import main.management.commands.messages as messages
 import main.management.commands.buttons as buttons
-
-
-START_INLINE = InlineKeyboardMarkup(
-    [
-        [
-            InlineKeyboardButton(**buttons.I_AM_CLIENT),
-            InlineKeyboardButton(**buttons.I_AM_CONTACTOR)
-        ],
-        # [
-        #     InlineKeyboardButton(**buttons.I_AM_MANAGER),
-        #     InlineKeyboardButton(**buttons.I_AM_OWNER)
-        # ],
-    ]
-)
-
-
-BECOME_CONTRACTOR_INLINE = InlineKeyboardMarkup(
-    [
-        [
-            InlineKeyboardButton(**buttons.NEW_CONTRACTOR),
-            InlineKeyboardButton(**buttons.CHANGE_ROLE)
-        ]
-
-    ]
-)
-
-CLIENT_INLINE_KEYBOARD = InlineKeyboardMarkup(
-    [
-        [InlineKeyboardButton(**buttons.NEW_REQUEST)],
-        [
-            InlineKeyboardButton(**buttons.CLIENT_CURRENT_ORDERS),
-            InlineKeyboardButton(**buttons.CLIENT_CURRENT_TARIFF)
-        ],
-        [InlineKeyboardButton(**buttons.CHANGE_ROLE)]
-    ]
-)
-
-CONTRACTOR_INLINE_KEYBOARD = InlineKeyboardMarkup(
-    [
-        [InlineKeyboardButton(**buttons.CONTRACTOR_CURRENT_ORDERS)],
-        [InlineKeyboardButton(**buttons.CONTRACTOR_AVAILABLE_ORDERS)],
-        [InlineKeyboardButton(**buttons.CHANGE_ROLE)],
-
-    ]
-)
-
-SUBSCRIPTION_KEYBOARD = InlineKeyboardMarkup(
-    [
-        [InlineKeyboardButton(**buttons.CREATE_SUBSCRIPTION)],
-        [InlineKeyboardButton(**buttons.BACK_TO_CLIENT_MAIN)]
-    ]
-)
-
-CANCEL_INLINE = InlineKeyboardMarkup(
-    [
-        [InlineKeyboardButton(**buttons.CANCEL)]
-    ]
-)
+import main.management.commands.keyboards as keyboards
 
 
 def delete_prev_inline(func, *args, **kwargs):
@@ -108,6 +48,8 @@ def delete_prev_inline(func, *args, **kwargs):
             update, context = kwargs['update'], kwargs['context']
         if update.callback_query:
             with suppress(BadRequest):
+                # Just in case if decorator handle message with callback and with no inline keyboard 
+                # or any telegram error which is not critical for other functions
                 context.bot.edit_message_reply_markup(
                     chat_id=update.effective_chat.id,
                     message_id=update.callback_query.message.message_id,
@@ -122,20 +64,20 @@ def check_client_subscription(func, *args, **kwargs):
             update, context = args[-2:]
         except ValueError:
             update, context = kwargs['update'], kwargs['context']
-        if db.is_actual_subscription(telegram_id=update.effective_chat.id):
+        if db.is_actual_client_subscription(telegram_id=update.effective_chat.id):
             return func(*args, **kwargs)
         else:
             return subscription_alert(update=update, context=context)
     return wrapper
 
 
-def check_available_request(func, *args, **kwargs):
+def check_available_client_request(func, *args, **kwargs):
     def wrapper(*args, **kwargs):
         try:
             update, context = args[-2:]
         except ValueError:
             update, context = kwargs['update'], kwargs['context']
-        if db.is_available_request(telegram_id=update.effective_chat.id):
+        if db.is_available_client_request(telegram_id=update.effective_chat.id):
             return func(*args, **kwargs)
         else:
             return available_requests_alert(update=update, context=context)
@@ -146,8 +88,6 @@ def send_message_all_managers(message: str,
                               update: Update,
                               context: CallbackContext) -> None:
     for manager_id in db.get_managers_telegram_ids():
-        print(manager_id, type(manager_id))
-        print(message, type(message))
         context.bot.send_message(
             manager_id,
             message
@@ -158,7 +98,7 @@ def send_message_all_managers(message: str,
 def start(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
-        'Здравствуйте!',
+        messages.WELCOME,
         reply_markup=ReplyKeyboardRemove()
     )
     if not db.get_person(telegram_id=update.effective_chat.id):
@@ -166,7 +106,7 @@ def start(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.CHECK_ROLE,
-        reply_markup=START_INLINE
+        reply_markup=keyboards.START_INLINE
     )
     return 'VISITOR'
 
@@ -182,7 +122,7 @@ def check_access(update: Update, context: CallbackContext) -> str:
             context.bot.send_message(
                 update.effective_chat.id,
                 text=messages.NOT_CONTRACTOR,
-                reply_markup=BECOME_CONTRACTOR_INLINE
+                reply_markup=keyboards.BECOME_CONTRACTOR_INLINE
             )
     elif claimed_role == 'client':
         return new_client(update=update, context=context)
@@ -202,25 +142,17 @@ def available_requests_alert(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.NO_AVAILABLE_REQUESTS,
-        reply_markup=SUBSCRIPTION_KEYBOARD
+        reply_markup=keyboards.SUBSCRIPTION_KEYBOARD
     )
     return 'CLIENT'
 
 
 def hello_visitor(update: Update, context: CallbackContext) -> str:
     context.bot.send_document(
-            chat_id=update.effective_chat.id,
-            document=open('privacy_policy.pdf', 'rb'),
-            caption=messages.HELLO_VISITOR,
-            reply_markup=ReplyKeyboardMarkup(
-                [[
-                    KeyboardButton(
-                        text=buttons.PHONENUMBER_REQUEST,
-                        request_contact=True
-                    )
-                ]],
-                resize_keyboard=True
-            )
+        chat_id=update.effective_chat.id,
+        document=open('privacy_policy.pdf', 'rb'),
+        caption=messages.HELLO_VISITOR,
+        reply_markup=keyboards.PHONE_REQUEST_MARKUP,
     )
     return 'VISITOR_PHONENUMBER'
 
@@ -276,32 +208,32 @@ def client_main(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.CLIENT_MAIN,
-        reply_markup=CLIENT_INLINE_KEYBOARD
+        reply_markup=keyboards.CLIENT_INLINE_KEYBOARD
     )
     return 'CLIENT'
 
 
 @delete_prev_inline
 @check_client_subscription
-@check_available_request
+@check_available_client_request
 def new_request(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.DESCRIBE_REQUEST,
-        reply_markup=CANCEL_INLINE
+        reply_markup=keyboards.CANCEL_INLINE
     )
     return 'CLIENT_NEW_REQUEST'
 
 
 @delete_prev_inline
 @check_client_subscription
-@check_available_request
+@check_available_client_request
 def client_request_description(update: Update, context: CallbackContext) -> str:
     if len(update.message.text) > 1000:
         context.bot.send_message(
             update.effective_chat.id,
             text=messages.TOO_MUCH_REQUEST_SYMBOLS,
-            reply_markup=CANCEL_INLINE
+            reply_markup=keyboards.CANCEL_INLINE
         )
         return 'CLIENT_NEW_REQUEST'
 
@@ -309,7 +241,11 @@ def client_request_description(update: Update, context: CallbackContext) -> str:
         telegram_id=update.effective_chat.id,
         description=update.message.text
     )
-    send_message_all_managers(message=f'NEW_ORDER\n\n{order}', update=update, context=context)
+    send_message_all_managers(
+        message=messages.new_order_notification(order=order),
+        update=update,
+        context=context
+    )
     context.bot.send_message(
         update.effective_chat.id,
         messages.SUCCESS_REQUEST
@@ -321,20 +257,10 @@ def client_request_description(update: Update, context: CallbackContext) -> str:
 @delete_prev_inline
 def display_current_orders(update: Update, context: CallbackContext) -> str:
     orders = db.get_current_client_orders(telegram_id=update.effective_chat.id)
-    orders_buttons = list()
-    message = 'Ваши заказы:'
-    for num, order in enumerate(orders, start=1):
-        message += f'\n\nЗаказ {num}.\n{order["created_at"]}: {order["description"][:50]}...'
-        orders_buttons.append(InlineKeyboardButton(
-            text=f'{buttons.ORDER["text"]} {num}',
-            callback_data=f'{buttons.ORDER["callback_data"]}:::{order["id"]}'
-        ))
-    orders_buttons = list(chunked(orders_buttons, 3))
-    orders_buttons.append([InlineKeyboardButton(**buttons.BACK_TO_CLIENT_MAIN)])
     context.bot.send_message(
         update.effective_chat.id,
-        text=message,
-        reply_markup=InlineKeyboardMarkup(orders_buttons)
+        text=messages.display_orders(orders=orders),
+        reply_markup=keyboards.client_orders_inline(orders=orders)
     )
     return 'CLIENT'
 
@@ -342,31 +268,16 @@ def display_current_orders(update: Update, context: CallbackContext) -> str:
 @delete_prev_inline
 def display_order(update: Update, context: CallbackContext) -> str:
     _, order_id = update.callback_query.data.split(':::')
-    order = db.get_order(telegram_id=update.effective_chat.id, order_id=int(order_id))
-    order_buttons = [
-        [InlineKeyboardButton(
-            text=buttons.ORDER_COMMENT['text'],
-            callback_data=f'{buttons.ORDER_COMMENT["callback_data"]}:::{order_id}'
-        )]
-    ]
-    if db.can_see_contractor_contacts(telegram_id=update.effective_chat.id):
-        order_buttons.append([
-            InlineKeyboardButton(
-                text=buttons.CONTRACTOR_CONTACTS['text'],
-                callback_data=f'{buttons.CONTRACTOR_CONTACTS["callback_data"]}:::{order_id}'
-            )
-        ])
-    order_buttons.append([
-        InlineKeyboardButton(
-            text=buttons.ORDER_COMPLAINT['text'],
-            callback_data=f'{buttons.ORDER_COMPLAINT["callback_data"]}:::{order_id}'
-        )
-    ])
-    order_buttons.append([InlineKeyboardButton(**buttons.BACK_TO_CLIENT_MAIN)])
+    order = db.get_order(order_id=int(order_id))
     context.bot.send_message(
         update.effective_chat.id,
         text=order.display(),
-        reply_markup=InlineKeyboardMarkup(order_buttons)
+        reply_markup=keyboards.client_order_inline(
+            order=order,
+            can_see_contractor_contact=db.can_see_contractor_contacts(
+                telegram_id=update.effective_chat.id
+            )
+        )
     )
     return 'CLIENT'
 
@@ -378,7 +289,7 @@ def add_order_comment(redis: Redis, update: Update, context: CallbackContext) ->
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.NEW_CLIENT_COMMENT,
-        reply_markup=CANCEL_INLINE
+        reply_markup=keyboards.CANCEL_INLINE
     )
     return 'CLIENT_NEW_COMMENT'
 
@@ -389,7 +300,7 @@ def client_comment_description(redis: Redis, update: Update, context: CallbackCo
         context.bot.send_message(
             update.effective_chat.id,
             text=messages.TOO_MUCH_REQUEST_SYMBOLS,
-            reply_markup=CANCEL_INLINE
+            reply_markup=keyboards.CANCEL_INLINE
         )
         return 'CLIENT_NEW_COMMENT'
     order_id = redis.get(f'{update.effective_chat.id}_order_id')
@@ -397,15 +308,11 @@ def client_comment_description(redis: Redis, update: Update, context: CallbackCo
         order_id=int(order_id),
         comment=update.message.text
     )
-    manager_message = dedent(
-        f"""
-        NEW COMMENT
-        order: {order}
-
-        comment: {comment}
-        """
+    send_message_all_managers(
+        message=messages.new_client_comment_notification(order=order, comment=comment),
+        update=update,
+        context=context
     )
-    send_message_all_managers(message=manager_message, update=update, context=context)
     context.bot.send_message(
         update.effective_chat.id,
         messages.SUCCESS_COMMENT
@@ -422,7 +329,7 @@ def add_order_complaint(redis: Redis, update: Update, context: CallbackContext) 
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.NEW_CLIENT_COMMENT,
-        reply_markup=CANCEL_INLINE
+        reply_markup=keyboards.CANCEL_INLINE
     )
     return 'CLIENT_NEW_COMPLAINT'
 
@@ -433,7 +340,7 @@ def client_complaint_description(redis: Redis, update: Update, context: Callback
         context.bot.send_message(
             update.effective_chat.id,
             text=messages.TOO_MUCH_REQUEST_SYMBOLS,
-            reply_markup=CANCEL_INLINE
+            reply_markup=keyboards.CANCEL_INLINE
         )
         return 'CLIENT_NEW_COMPLAINT'
     order_id = redis.get(f'{update.effective_chat.id}_order_id')
@@ -441,15 +348,11 @@ def client_complaint_description(redis: Redis, update: Update, context: Callback
         order_id=int(order_id),
         complaint=update.message.text
     )
-    manager_message = dedent(
-        f"""
-        NEW COMPLAINT
-        order: {order}
-
-        comment: {complaint}
-        """
+    send_message_all_managers(
+        message=messages.new_client_complaint_notification(order=order, complaint=complaint),
+        update=update,
+        context=context
     )
-    send_message_all_managers(message=manager_message, update=update, context=context)
     context.bot.send_message(
         update.effective_chat.id,
         messages.SUCCESS_COMPLAINT
@@ -482,7 +385,7 @@ def send_current_tariff(update: Update, context: CallbackContext) -> str:
     client_tariff_info = db.get_client_subscription_info(telegram_id=update.effective_chat.id)
     context.bot.send_message(
         update.effective_chat.id,
-        text=client_tariff_info or 'У вас нет активных подписок'
+        text=client_tariff_info or messages.NO_ACTIVE_SUBSCRIPTIONS
     )
     sleep(2)
     return client_main(update=update, context=context)
@@ -493,7 +396,7 @@ def new_contractor(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.NEW_CONTRACTOR,
-        reply_markup=CANCEL_INLINE
+        reply_markup=keyboards.CANCEL_INLINE
     )
     return 'NEW_CONTRACTOR'
 
@@ -506,20 +409,15 @@ def new_contractor_message(update: Update, context: CallbackContext) -> str:
             messages.TOO_MUCH_REQUEST_SYMBOLS
         )
         return 'NEW_CONTRACTOR'
-
     contractor = db.create_contractor(
         telegram_id=update.effective_chat.id,
         comment=update.message.text
     )
-    manager_message = dedent(
-        f"""
-        NEW CONTRACTOR REQUEST
-        contractor: {contractor}
-
-        request: {update.message.text}
-        """
+    send_message_all_managers(
+        message=messages.new_contractor_notification(contractor=contractor, message=update.message.text),
+        update=update,
+        context=context
     )
-    send_message_all_managers(message=manager_message, update=update, context=context)
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.NEW_CONTRACTOR_CREATED
@@ -532,7 +430,7 @@ def contractor_main(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
         text=messages.CONTRACTOR_MAIN,
-        reply_markup=CONTRACTOR_INLINE_KEYBOARD
+        reply_markup=keyboards.CONTRACTOR_INLINE_KEYBOARD
     )
     return 'CONTRACTOR'
 
@@ -540,45 +438,33 @@ def contractor_main(update: Update, context: CallbackContext) -> str:
 @delete_prev_inline
 def contractor_display_orders(update: Update, context: CallbackContext) -> str:
     callback_data = update.callback_query.data
-    orders_buttons = list()
+    contractor = db.get_contractor(telegram_id=update.effective_chat.id)
     if callback_data == buttons.CONTRACTOR_CURRENT_ORDERS['callback_data']:
-        orders = db.get_contractor_current_orders(telegram_id=update.effective_chat.id)
+        orders = contractor.get_current_orders()
         if orders:
-            message = 'Ваши текущие заказы:'
-            for num, order in enumerate(orders, 1):
-                message += f'\n\n{order["display"]}'
-                orders_buttons.append(InlineKeyboardButton(
-                    text=f'{buttons.CURRENT_ORDER["text"]} {num}',
-                    callback_data=f'{buttons.CURRENT_ORDER["callback_data"]}:::{order["id"]}'
-                ))
+            message = messages.display_orders(orders=orders, are_current=True)
+            keyboard = keyboards.contractor_orders_inline(orders=orders, are_current_orders=True)
         else:
-            message = 'У вас нет активных заказов'
+            no_order_message = messages.NO_ACTIVE_ORDERS
     elif callback_data == buttons.CONTRACTOR_AVAILABLE_ORDERS['callback_data']:
         orders = db.get_contractor_available_orders(telegram_id=update.effective_chat.id)
         if orders:
-            message = 'Доступные заказы:'
-            for num, order in enumerate(orders, 1):
-                message += f'\n{buttons.AVAILABLE_ORDER["text"]} {num}.{order["display"]}'
-                orders_buttons.append(InlineKeyboardButton(
-                    text=f'{buttons.AVAILABLE_ORDER["text"]} {num}',
-                    callback_data=f'{buttons.AVAILABLE_ORDER["callback_data"]}:::{order["id"]}'
-                ))
+            message = messages.display_orders(orders=orders, are_current=True)
+            keyboard = keyboards.contractor_orders_inline(orders=orders, are_available_orders=True)
         else:
-            message = 'У вас нет доступных заказов'
+            no_order_message = messages.NO_AVAILABLE_ORDERS
     if not orders:
         context.bot.send_message(
             update.effective_chat.id,
-            text=message,
+            text=no_order_message,
         )
         sleep(2)
         return contractor_main(update=update, context=context)
 
-    orders_buttons = list(chunked(orders_buttons, 3))
-    orders_buttons.append([InlineKeyboardButton(**buttons.BACK_TO_CONTRACTOR_MAIN)])
     context.bot.send_message(
         update.effective_chat.id,
         text=message,
-        reply_markup=InlineKeyboardMarkup(orders_buttons)
+        reply_markup=keyboard
     )
     return 'CONTRACTOR'
 
@@ -586,29 +472,15 @@ def contractor_display_orders(update: Update, context: CallbackContext) -> str:
 @delete_prev_inline
 def contractor_display_order(update: Update, context: CallbackContext) -> str:
     callback, order_id = update.callback_query.data.split(':::')
+    order = db.get_order(order_id=int(order_id))
     if callback == buttons.AVAILABLE_ORDER['callback_data']:
-        order_buttons = [
-            [InlineKeyboardButton(
-                text=buttons.TAKE_ORDER['text'],
-                callback_data=f'{buttons.TAKE_ORDER["callback_data"]}:::{order_id}'
-            )]
-        ]
+        keyboard = keyboards.contractor_order_inline(order=order, is_available=True)
     elif callback == buttons.CURRENT_ORDER['callback_data']:
-        order_buttons = [
-            [InlineKeyboardButton(
-                text=buttons.FINISH_ORDER['text'],
-                callback_data=f'{buttons.FINISH_ORDER["callback_data"]}:::{order_id}'
-            )],
-            [InlineKeyboardButton(
-                text=buttons.CONTRACTOR_SET_ESTIMATE_DATETIME['text'],
-                callback_data=f'{buttons.CONTRACTOR_SET_ESTIMATE_DATETIME["callback_data"]}:::{order_id}'
-            )]
-        ]
-    order_buttons.append([InlineKeyboardButton(**buttons.BACK_TO_CONTRACTOR_MAIN)])
+        keyboard = keyboards.contractor_order_inline(order=order, is_current=True)
     context.bot.send_message(
         update.effective_chat.id,
         db.display_order_info(order_id=int(order_id)),
-        reply_markup=InlineKeyboardMarkup(order_buttons)
+        reply_markup=keyboard
     )
     return 'CONTRACTOR'
 
@@ -616,19 +488,15 @@ def contractor_display_order(update: Update, context: CallbackContext) -> str:
 @delete_prev_inline
 def contractor_take_order(update: Update, context: CallbackContext) -> str:
     _, order_id = update.callback_query.data.split(':::')
-    manager_message = dedent(
-        f"""
-        CONTRACTOR TAKE ORDER
-        contractor_id: {update.effective_chat.id}
-
-        order_id: {order_id}
-        """
-    )
     db.set_order_contractor(telegram_id=update.effective_chat.id, order_id=order_id)
-    send_message_all_managers(message=manager_message, update=update, context=context)
+    send_message_all_managers(
+        message=messages.contractor_took_order_notification(order=db.get_order(order_id=int(order_id))),
+        update=update,
+        context=context
+    )
     context.bot.send_message(
         update.effective_chat.id,
-        text='Заказ ваш!'
+        text=messages.APPROVE_ORDER_CONTRACTOR
     )
     return contractor_main(update=update, context=context)
 
@@ -637,18 +505,14 @@ def contractor_take_order(update: Update, context: CallbackContext) -> str:
 def contractor_finish_order(update: Update, context: CallbackContext) -> str:
     _, order_id = update.callback_query.data.split(':::')
     db.close_order(order_id=int(order_id))
-    manager_message = dedent(
-        f"""
-        CONTRACTOR closed ORDER
-        contractor_id: {update.effective_chat.id}
-
-        request: {order_id}
-        """
+    send_message_all_managers(
+        message=messages.contractor_finished_order_notification(order=db.get_order(order_id=int(order_id))),
+        update=update,
+        context=context
     )
-    send_message_all_managers(message=manager_message, update=update, context=context)
     context.bot.send_message(
         update.effective_chat.id,
-        text='Заказ закрыт'
+        text=messages.ORDER_CLOSED
     )
     return contractor_main(update=update, context=context)
 
@@ -660,41 +524,37 @@ def contractor_set_estimate_datetime(redis: Redis, update: Update, context: Call
     context.bot.send_message(
         update.effective_chat.id,
         messages.SET_ESTIMATE_DATETIME,
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(**buttons.BACK_TO_CONTRACTOR_MAIN)]])
+        reply_markup=keyboards.BACK_TO_CONTRACTOR_MAIN
     )
     return 'CONTACTOR_SET_ESTIMATE_DATETIME'
 
 
 @delete_prev_inline
 def contractor_enter_estimate_datetime(redis: Redis, update: Update, context: CallbackContext) -> str:
-    separators = '[:,. ]'
-    datetime_regex = r'\d{4}[:,. ]\d{2}[:,. ]\d{2}[:,. ]\d{2}[:,. ]\d{2}'
+    separators = r'[:,. -!]'
+    datetime_regex = r'\d{4}[:,. -!]\d{2}[:,. -!]\d{2}[:,. -!]\d{2}[:,. -!]\d{2}'
     try:
         if not re.match(datetime_regex, update.message.text):
             raise ValueError
         year, month, day, hour, minute = re.split(separators, update.message.text)
-         # here can be ValueError
         estimate_datetime = make_aware(
+            # here can be ValueError
             datetime(int(year), int(month), int(day), int(hour), int(minute), 0, 0)
         )
         order_id = redis.get(f'{update.effective_chat.id}_contractor_order_id')
         order = db.set_estimate_datetime(order_id=int(order_id), estimate_datetime=estimate_datetime)
-        manager_message = dedent(
-            f"""
-            CONTRACTOR SET ORDER estimate datetime
-            {estimate_datetime.strftime("%d.%m.%Y %H:%M")}
-
-            order: {order}
-            """
+        send_message_all_managers(
+            message=messages.contractor_set_estimate_datetime_notifiction(order=order),
+            update=update,
+            context=context
         )
-        send_message_all_managers(message=manager_message, update=update, context=context)
         redis.delete(f'{update.effective_chat.id}_contractor_order_id')
         return contractor_main(update=update, context=context)
     except ValueError:
         context.bot.send_message(
             update.effective_chat.id,
             messages.SET_ESTIMATE_DATETIME,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(**buttons.BACK_TO_CONTRACTOR_MAIN)]])
+            reply_markup=keyboards.BACK_TO_CONTRACTOR_MAIN
         )
         return 'CONTACTOR_SET_ESTIMATE_DATETIME'
 
@@ -703,50 +563,17 @@ def contractor_display_salary(update: Update, context: CallbackContext) -> str:
     context.bot.send_message(
         update.effective_chat.id,
         text=db.get_contractor_salary(telegram_id=update.effective_chat.id),
-        reply_markup=CONTRACTOR_INLINE_KEYBOARD
+        reply_markup=keyboards.CONTRACTOR_INLINE_KEYBOARD
     )
     return 'CONTRACTOR'
 
 
 @delete_prev_inline
 def tell_about_subscription(update: Update, context: CallbackContext) -> str:
-    tariffs = db.get_tariffs()
-    message = "Давайте расскажу про наши тарифные планы:\n"
-    subscription_buttons = list()
-    for tariff in tariffs:
-        message += dedent(
-                f"""
-                {tariff.title}:
-                {tariff.orders_limit} заявок в месяц.
-
-                Время ответа на заявку: {tariff.display_answer_delay()}
-                """
-        )
-        if tariff.personal_contractor_available:
-            message += dedent(
-                """
-                Возможность закрепить за собой подрядчика.
-                """
-            )
-        if tariff.contractor_contacts_availability:
-            message += dedent(
-                """
-                Возможность увидеть контакты подрядчика.
-                """
-            )
-        subscription_buttons.append(
-            [
-                InlineKeyboardButton(
-                    text=f'Оформить подписку "{tariff.title}"',
-                    callback_data=f'activate_subscription:{tariff.id}'
-                )
-            ]
-        )
-    subscription_buttons.append([InlineKeyboardButton(**buttons.CANCEL)])
     context.bot.send_message(
         update.effective_chat.id,
-        message,
-        reply_markup=InlineKeyboardMarkup(subscription_buttons)
+        messages.tell_about_subscription(tariffs=tariffs),
+        reply_markup=keyboards.subscriptions_inline(tariffs=db.get_tariffs())
     )
     return 'SUBSCRIPTION'
 
@@ -786,27 +613,11 @@ def confirm_payment(redis: Redis, update: Update, context: CallbackContext) -> N
         tariff_id=tariff_id,
         payment_id=payload
     )
-    manager_message = dedent(
-        f"""
-        NEW SUBSCRIPTION
-
-        {subscription}
-        """
+    send_message_all_managers(
+        message=messages.new_subscription_notification(subscription=subscription),
+        update=update,
+        context=context
     )
-    send_message_all_managers(message=manager_message, update=update, context=context)
-
-
-@delete_prev_inline
-def cancel_new_contractor(update: Update, context: CallbackContext) -> str:
-    role = db.get_role(telegram_id=update.effective_chat.id)
-    context.bot.send_message(
-        update.effective_chat.id,
-        text=messages.OK,
-        reply_markup=BECOME_CONTRACTOR_INLINE
-    )
-    if role:
-        return role.upper()
-    return 'VISITOR'
 
 
 class Command(BaseCommand):
@@ -818,7 +629,13 @@ class Command(BaseCommand):
         env.read_env()
 
         updater = Updater(token=env.str('TELEGRAM_BOT_TOKEN'), use_context=True)
-        redis = Redis(host='localhost', port=6379, db=0, decode_responses=True)
+        redis = Redis(
+            host=env.str('REDIS_HOST', 'localhost'),
+            port=env.int('REDIS_PORT', 6379),
+            db=env.int('REDIS_DB', 0),
+            password=env.str('REDIS_PASSWORD', None),
+            decode_responses=True
+        )
 
         updater.dispatcher.add_handler(
             ConversationHandler(

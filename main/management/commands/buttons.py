@@ -1,5 +1,3 @@
-# Просьба созранять алфавитный порядок
-
 AVAILABLE_ORDER = {'text': 'Заказ', 'callback_data': 'show_available_order'}
 
 BACK_TO_CLIENT_MAIN = {'text': 'На главную', 'callback_data': 'client_main'}
@@ -8,39 +6,33 @@ BACK_TO_CONTRACTOR_MAIN = {'text': 'На главную', 'callback_data': 'cont
 
 CANCEL = {'text': "Я передумал", 'callback_data': 'cancel'}
 
-CHECK_ACCESS_CALLBACK = 'check_access'
-
-CURRENT_ORDER = {'text': 'Заказ', 'callback_data': 'show_current_order'}
-
-FINISH_ORDER = {'text': 'Сдать заказ', 'callback_data': 'finish_order'}
-
-I_AM_OWNER = {'text': 'Я владелец', 'callback_data': f'{CHECK_ACCESS_CALLBACK}:::owner'}
-
-I_AM_CONTACTOR = {'text': 'Я подрядчик', 'callback_data': f'{CHECK_ACCESS_CALLBACK}:::contractor'}
-
-I_AM_MANAGER = {'text': 'Я менеджер', 'callback_data': f'{CHECK_ACCESS_CALLBACK}:::manager'}
-
-I_AM_CLIENT = {'text': 'Я заказчик', 'callback_data': f'{CHECK_ACCESS_CALLBACK}:::client'}
-
 CHANGE_ROLE = {'text': 'Сменить роль', 'callback_data': 'change_role'}
 
-CONTRACTOR_CONTACTS = {'text': "Показать контакты подрядчика", "callback_data": 'send_contractor_contacts'}
-
-CONTRACTOR_CURRENT_ORDERS = {'text': 'Посмотреть актуальные заказы', 'callback_data': 'contractor_current_orders'}
-
-CONTRACTOR_AVAILABLE_ORDERS = {'text': 'Посмотреть доступные заказы', 'callback_data': 'contractor_available_orders'}
-
-CONTRACTOR_SALARY = {'text': 'Посмотреть зарплату', 'callback_data': 'contractor_salary'}
-
-CONTRACTOR_SET_ESTIMATE_DATETIME = {'text': 'Указать срок выполнения заказа', 'callback_data': 'contractor_set_estimate_datetime'}
+CHECK_ACCESS_CALLBACK = 'check_access'
 
 CLIENT_CURRENT_ORDERS = {'text': 'Мои текущие заказы', 'callback_data': 'client_current_orders'}
 
 CLIENT_CURRENT_TARIFF = {'text': 'Мой тариф', 'callback_data': 'client_current_tariff'}
 
+CONTRACTOR_AVAILABLE_ORDERS = {'text': 'Посмотреть доступные заказы', 'callback_data': 'contractor_available_orders'}
+
+CONTRACTOR_CONTACTS = {'text': "Показать контакты подрядчика", "callback_data": 'send_contractor_contacts'}
+
+CONTRACTOR_CURRENT_ORDERS = {'text': 'Посмотреть актуальные заказы', 'callback_data': 'contractor_current_orders'}
+
+CONTRACTOR_SALARY = {'text': 'Посмотреть зарплату', 'callback_data': 'contractor_salary'}
+
+CONTRACTOR_SET_ESTIMATE_DATETIME = {'text': 'Указать срок выполнения заказа', 'callback_data': 'contractor_set_estimate_datetime'}
+
 CREATE_SUBSCRIPTION = {'text': 'Оформить подписку', 'callback_data': 'create_subscription'}
 
-FILL_CONTRACTOR_FORM = {'text': 'Заполнить анкету', 'callback_data': 'fill_contractor_form'}
+CURRENT_ORDER = {'text': 'Заказ', 'callback_data': 'show_current_order'}
+
+FINISH_ORDER = {'text': 'Сдать заказ', 'callback_data': 'finish_order'}
+
+I_AM_CONTACTOR = {'text': 'Я подрядчик', 'callback_data': f'{CHECK_ACCESS_CALLBACK}:::contractor'}
+
+I_AM_CLIENT = {'text': 'Я заказчик', 'callback_data': f'{CHECK_ACCESS_CALLBACK}:::client'}
 
 NEW_CONTRACTOR = {'text': 'Стать подрядчиком', 'callback_data': 'new_contractor'}
 

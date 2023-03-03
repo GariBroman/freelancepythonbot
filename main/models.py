@@ -1,5 +1,6 @@
 from textwrap import dedent
 from django.db import models
+from django.http import QueryDict
 from django.utils.timezone import now, timedelta
 from phonenumber_field.modelfields import PhoneNumberField
 from django.core.validators import MinValueValidator
@@ -74,6 +75,9 @@ class Owner(models.Model):
         return f'{self.person.name} ({self.person.phone})'
 
 
+
+
+
 class Contractor(models.Model):
     person = models.OneToOneField(
         Person,
@@ -90,6 +94,12 @@ class Contractor(models.Model):
 
     def __str__(self):
         return f'{self.person.name} ({self.person.phone})'
+    
+    def get_current_orders(self) -> models.QuerySet:
+        return self.orders.filter(
+            finished_at__isnull=True,
+            declined=False
+        ).order_by('created_at')
 
 
 class Manager(models.Model):
@@ -216,6 +226,13 @@ class ClientSubscription(models.Model):
         )
         return info
 
+class OrderManager(models.QuerySet):
+    def get_availables(self):
+        return self.filter(
+            declined=False,
+            contractor=None,
+            take_at=None
+        )
 
 class Order(models.Model):
     subscription = models.ForeignKey(
@@ -244,6 +261,7 @@ class Order(models.Model):
     estimated_time = models.DateTimeField('Срок выполнения заказа', null=True, blank=True, db_index=True)
     finished_at = models.DateTimeField('Заказ выполнен', null=True, blank=True, db_index=True)
     
+    objects = OrderManager.as_manager()
     class Meta:
         verbose_name = 'заказ'
         verbose_name_plural = 'заказы'
@@ -260,7 +278,7 @@ class Order(models.Model):
     def is_taken_deadline(self):
         return now() > self.created_at + timedelta(self.subscription.tariff.answer_delay)
 
-    def short_display(self):
+    def display(self):
         return dedent(
             f'''
             Создан: {self.created_at.strftime("%d.%m.%Y %H:%M")}

@@ -76,9 +76,9 @@ def get_contractor(telegram_id: int) -> main_models.Contractor:
     return main_models.Contractor.objects.get(person__telegram_id=telegram_id)
 
 
-def is_actual_subscription(telegram_id: int) -> bool:
+def is_actual_client_subscription(client_telegram_id: int) -> bool:
     try:
-        client = main_models.Client.objects.get(person__telegram_id=telegram_id)
+        client = main_models.Client.objects.get(person__telegram_id=client_telegram_id)
         last_subscription = client.subscriptions.last()
         if last_subscription:
             return last_subscription.is_actual()
@@ -129,21 +129,13 @@ def get_current_client_orders(telegram_id: int) -> list[dict]:
     return client.get_current_orders()
 
 
-def is_available_request(telegram_id: int) -> bool:
-    client = main_models.Client.objects.get(person__telegram_id=telegram_id)
+def is_available_client_request(client_telegram_id: int) -> bool:
+    client = main_models.Client.objects.get(person__telegram_id=client_telegram_id)
     return client.is_new_request_available()
 
 
-def get_order(telegram_id: int, order_id: int) -> main_models.Order:
-    # client = main_models.Client.objects.get(person__telegram_id=telegram_id)
-    # order = main_models.Order.objects.get(id=order_id)
-    # if order.subscription in client.subscriptions.all():
-    #     return order
-    order = main_models.Order.objects.get(
-        id=order_id,
-        subscription__client__person__telegram_id=telegram_id
-    )
-    return order
+def get_order(order_id: int) -> main_models.Order:
+    return main_models.Order.objects.get(id=order_id)
 
 
 def get_client_subscription_info(telegram_id: int) -> str or None:
@@ -199,22 +191,20 @@ def create_client_order_complaint(order_id: int,
     return order, complaint
 
 
-def get_contractor_current_orders(telegram_id: int) -> list[dict[str, int or str]]:
-    contractor = get_contractor(telegram_id=telegram_id)
-    orders = main_models.Order.objects.filter(contractor=contractor).filter(finished_at__isnull=True). \
-        filter(declined=False).order_by('created_at')
-    current_orders = [
-        {'id': order.id, 'display': order.short_display()} for order in orders
-    ]
-    return current_orders
+# def get_contractor_current_orders(telegram_id: int) -> QuerySet:
+#     orders = main_models.Order.objects.filter(
+#         contractor__person__telegram_id=telegram_id,
+#         finished_at__isnull=True,
+#         declined=False).order_by('created_at')
+#     return orders
 
 
 def get_contractor_available_orders(telegram_id: int) -> list[dict[str, int or str]]:
-    orders = main_models.Order.objects.all().order_by('created_at')
-    available_orders = [
-        {'id': order.id, 'display': order.short_display()} for order in orders if order.is_available_order()
-    ]
-    return available_orders
+    return main_models.Order.objects.get_availables().order_by('created_at')
+    # available_orders = [
+    #     {'id': order.id, 'display': order.short_display()} for order in orders if order.is_available_order()
+    # ]
+    # return available_orders
 
 
 def display_contractor_salary(telegram_id: int) -> str:
