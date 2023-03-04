@@ -17,16 +17,10 @@ class EntityNotFoundError(Exception):
 
 def fetch_start_end_of_month(date: datetime = None) -> tuple[datetime, datetime]:
     point = date or datetime.now().date()
-    # if date:
-    #     point = date
-    # else:
-    #     point = datetime.now().date()
 
     start_month = datetime(day=1, month=point.month, year=point.year)
     next_month = datetime(day=28, month=point.month, year=point.year) + timedelta(days=4)
     end_month = datetime(day=1, month=next_month.month, year=next_month.year)
-    # maybe just return start_month?
-
     return start_month, end_month
 
 
@@ -186,40 +180,8 @@ def create_client_order_complaint(order_id: int,
     return order, complaint
 
 
-# def get_contractor_current_orders(telegram_id: int) -> QuerySet:
-#     orders = main_models.Order.objects.filter(
-#         contractor__person__telegram_id=telegram_id,
-#         finished_at__isnull=True,
-#         declined=False).order_by('created_at')
-#     return orders
-
-
 def get_contractor_available_orders(telegram_id: int) -> QuerySet:
     return main_models.Order.objects.get_availables().order_by('created_at')
-    # available_orders = [
-    #     {'id': order.id, 'display': order.short_display()} for order in orders if order.is_available_order()
-    # ]
-    # return available_orders
-
-
-# def display_contractor_salary(telegram_id: int) -> str:
-#     contractor = get_contractor(telegram_id=telegram_id)
-
-#     start_period, end_period = fetch_start_end_of_month()
-#     filter_args = {
-#         'contractor': contractor,
-#         'finished_at__isnull': False,
-#         'finished_at__gte': start_period,
-#         'finished_at__lt': end_period
-#     }
-#     query = contractor.orders.filter(**filter_args).aggregate(Sum('salary'))
-
-#     return f'Всего вы выполнили заказов на {query["salary__sum"]} руб.'
-
-
-# def display_order_info(order_id: int) -> str:
-#     order = main_models.Order.objects.get(id=order_id)
-#     return order.display()
 
 
 def set_estimate_datetime(order_id: int, estimate_datetime: datetime) -> main_models.Order:

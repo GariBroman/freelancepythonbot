@@ -64,7 +64,7 @@ def check_client_subscription(func, *args, **kwargs):
             update, context = args[-2:]
         except ValueError:
             update, context = kwargs['update'], kwargs['context']
-        if db.is_actual_client_subscription(telegram_id=update.effective_chat.id):
+        if db.is_actual_client_subscription(client_telegram_id=update.effective_chat.id):
             return func(*args, **kwargs)
         else:
             return subscription_alert(update=update, context=context)
@@ -77,7 +77,7 @@ def check_available_client_request(func, *args, **kwargs):
             update, context = args[-2:]
         except ValueError:
             update, context = kwargs['update'], kwargs['context']
-        if db.is_available_client_request(telegram_id=update.effective_chat.id):
+        if db.is_available_client_request(client_telegram_id=update.effective_chat.id):
             return func(*args, **kwargs)
         else:
             return available_requests_alert(update=update, context=context)
