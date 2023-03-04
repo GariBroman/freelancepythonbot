@@ -93,7 +93,7 @@ SUCCESS_COMMENT = '✅ Ваш комментарий отправлен'
 SUCCESS_COMPLAINT = '✅ Ваша претензия отправлена'
 
 SUCCESS_REQUEST = dedent(
-    f'''
+    '''
     ✅ Заявка отправлена!
     Ожидайте звонка менеджера!
     '''
@@ -200,6 +200,7 @@ def new_contractor_notification(contractor: main_models.Contractor, message: str
         """
     )
 
+
 def contractor_took_order_notification(order: main_models.Order) -> str:
     return dedent(
         f"""
@@ -209,6 +210,7 @@ def contractor_took_order_notification(order: main_models.Order) -> str:
         order_id: {order}
         """
     )
+
 
 def contractor_finished_order_notification(order: main_models.Order) -> str:
     return dedent(
@@ -220,6 +222,7 @@ def contractor_finished_order_notification(order: main_models.Order) -> str:
         """
     )
 
+
 def contractor_set_estimate_datetime_notifiction(order: main_models.Order) -> str:
     return dedent(
         f"""
@@ -229,6 +232,7 @@ def contractor_set_estimate_datetime_notifiction(order: main_models.Order) -> st
         order: {order}
         """
     )
+
 
 def display_orders(orders: QuerySet,
                    are_current: bool = False,

@@ -1,6 +1,5 @@
 from textwrap import dedent
 from django.db import models
-from django.http import QueryDict
 from django.utils.timezone import now, timedelta
 from phonenumber_field.modelfields import PhoneNumberField
 from django.core.validators import MinValueValidator
@@ -34,28 +33,16 @@ class Client(models.Model):
     def __str__(self):
         return f'{self.person.name} ({self.person.phone})'
 
+    def has_actual_subscription(self):
+        if not self.subscriptions.last():
+            return False
+        return self.subscriptions.last().is_actual()
+
     def is_new_request_available(self):
         return self.subscriptions.last().orders_left() > 0
 
     def get_current_orders(self):
-
-        subscriptions = [subscription for subscription in self.subscriptions.all() if subscription.is_actual()]
-        orders = list()
-        for subscription in subscriptions:
-            for order in subscription.orders.all():
-                if order.finished_at is None and not order.declined:
-                    orders.append(order)
-
-        serialize_order = []
-        for order in orders:
-            serialize_order.append(
-                {
-                    'id': order.id,
-                    'description': order.description,
-                    'created_at': order.created_at.strftime('%Y-%m-%d'),
-                }
-            )
-        return serialize_order
+        return Order.objects.filter(subscription__client=self, finished_at=None, declined=False)
 
 
 class Owner(models.Model):
@@ -75,9 +62,6 @@ class Owner(models.Model):
         return f'{self.person.name} ({self.person.phone})'
 
 
-
-
-
 class Contractor(models.Model):
     person = models.OneToOneField(
         Person,
@@ -94,7 +78,7 @@ class Contractor(models.Model):
 
     def __str__(self):
         return f'{self.person.name} ({self.person.phone})'
-    
+
     def get_current_orders(self) -> models.QuerySet:
         return self.orders.filter(
             finished_at__isnull=True,
@@ -139,12 +123,12 @@ class Tariff(models.Model):
         return self.title
 
     def payment_description(self):
-        description = (
-            f'Ответ на заявку в течении: {self.display_answer_delay()}\n'
-            f'Срок действия тарифа: {self.validity.total_seconds() // 86400} дн.\n'
+        return dedent(
+            f"""
+            Ответ на заявку в течении: {self.display_answer_delay()}
+            Срок действия тарифа: {self.validity.total_seconds() // 86400} дн.
+            """
         )
-
-        return description
 
     def display_answer_delay(self) -> str:
         total_seconds = self.answer_delay.total_seconds()
@@ -164,11 +148,9 @@ class Tariff(models.Model):
         return f'{days_str}{hours_str}{minutes_str}{seconds_str}'
 
     def display(self) -> str:
-        # TODO move this bullshit to subscription.info_subscription
         return dedent(
             f"""
             {self.title}.
-
             {self.orders_limit} заявок в месяц.
             """
         )
@@ -197,7 +179,7 @@ class ClientSubscription(models.Model):
     )
     started_at = models.DateTimeField('Старт подписки', auto_now_add=True)
     payment_id = models.CharField(max_length=50, blank=True)
-    
+
     class Meta:
         verbose_name = 'подписка клиента'
         verbose_name_plural = 'подписки клиентов'
@@ -218,13 +200,12 @@ class ClientSubscription(models.Model):
         info = dedent(
             f"""
             Тарифный план: {self.tariff.title}
-
             Доступных заявок: {self.orders_left()}
-            
             Подписка закончится: {self.expired_at().strftime('%Y-%m-%d')}
             """
         )
         return info
+
 
 class OrderManager(models.QuerySet):
     def get_availables(self):
@@ -233,6 +214,7 @@ class OrderManager(models.QuerySet):
             contractor=None,
             take_at=None
         )
+
 
 class Order(models.Model):
     subscription = models.ForeignKey(
@@ -260,8 +242,9 @@ class Order(models.Model):
     take_at = models.DateTimeField('Взят в работу', null=True, blank=True, db_index=True)
     estimated_time = models.DateTimeField('Срок выполнения заказа', null=True, blank=True, db_index=True)
     finished_at = models.DateTimeField('Заказ выполнен', null=True, blank=True, db_index=True)
-    
+
     objects = OrderManager.as_manager()
+
     class Meta:
         verbose_name = 'заказ'
         verbose_name_plural = 'заказы'
@@ -278,26 +261,14 @@ class Order(models.Model):
     def is_taken_deadline(self):
         return now() > self.created_at + timedelta(self.subscription.tariff.answer_delay)
 
-    def display(self):
-        return dedent(
-            f'''
-            Создан: {self.created_at.strftime("%d.%m.%Y %H:%M")}
-            Задание: {self.description}
-            '''
-        )
-
     def display(self) -> str:
-        # TODO
         message = dedent(
-                f"""
-                {self.created_at.strftime('%Y-%m-%d')}
-
-                {self.description[:50]}...
-
-                Сроки выполнения: {self.estimated_time if self.estimated_time else 'производится оценка...'}
-
-                Статус заявки: {'в работе' if self.contractor else 'Ожидает распределения'}
-                """
+            f"""
+            {self.created_at.strftime('%Y-%m-%d')}
+            {self.description[:50]}...
+            Сроки выполнения: {self.estimated_time if self.estimated_time else 'производится оценка...'}
+            Статус заявки: {'в работе' if self.contractor else 'Ожидает распределения'}
+            """
         )
         return message
 
@@ -318,7 +289,7 @@ class OrderComments(models.Model):
     author = models.CharField('Автор комментария', max_length=10, choices=AUTHOR, null=True, blank=True)
     comment = models.TextField('Comment', blank=True)
     created_at = models.DateTimeField('Created at', auto_now_add=True)
-    
+
     def __str__(self):
         return f'[{self.author}] {self.comment[:100]}...'
 

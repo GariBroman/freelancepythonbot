@@ -1,4 +1,4 @@
-from django.db.models import QuerySet, Sum
+from django.db.models import QuerySet
 from django.utils.timezone import datetime, timedelta, now
 from django.db.utils import IntegrityError
 
@@ -12,8 +12,8 @@ class EntityNotFoundError(Exception):
         self.message = message
 
     def __str__(self):
-        return self.message 
-    
+        return self.message
+
 
 def fetch_start_end_of_month(date: datetime = None) -> tuple[datetime, datetime]:
     point = date or datetime.now().date()
@@ -54,15 +54,16 @@ def create_person(telegram_id: int,
     )
 
 
-def create_client(telegram_id: int) -> None:
+def create_client(telegram_id: int) -> main_models.Client:
     person = main_models.Person.objects.get(telegram_id=telegram_id)
-    main_models.Client.objects.get_or_create(person=person)
+    client, _ = main_models.Client.objects.get_or_create(person=person)
+    return client
 
 
 def create_contractor(telegram_id: int, comment: str) -> main_models.Contractor:
     person = main_models.Person.objects.get(telegram_id=telegram_id)
     try:
-        contractor = main_models.Contractor.objects.get_or_create(person=person, comment=comment)
+        contractor = main_models.Contractor.objects.create(person=person, comment=comment)
     except IntegrityError:
         contractor = main_models.Contractor.objects.get(person=person)
     return contractor
@@ -77,14 +78,8 @@ def get_contractor(telegram_id: int) -> main_models.Contractor:
 
 
 def is_actual_client_subscription(client_telegram_id: int) -> bool:
-    try:
-        client = main_models.Client.objects.get(person__telegram_id=client_telegram_id)
-        last_subscription = client.subscriptions.last()
-        if last_subscription:
-            return last_subscription.is_actual()
-        return False
-    except (main_models.Client.DoesNotExist,):
-        return False
+    client = main_models.Client.objects.get(person__telegram_id=client_telegram_id)
+    return client.has_actual_subscription()
 
 
 def update_client_phone(telegram_id: int,
@@ -124,14 +119,12 @@ def create_order(telegram_id: int, description: str) -> main_models.Order:
     return order
 
 
-def get_current_client_orders(telegram_id: int) -> list[dict]:
-    client = main_models.Client.objects.get(person__telegram_id=telegram_id)
-    return client.get_current_orders()
+def get_current_client_orders(telegram_id: int) -> QuerySet:
+    return get_client(telegram_id=telegram_id).get_current_orders()
 
 
 def is_available_client_request(client_telegram_id: int) -> bool:
-    client = main_models.Client.objects.get(person__telegram_id=client_telegram_id)
-    return client.is_new_request_available()
+    return get_client(telegram_id=client_telegram_id).is_new_request_available()
 
 
 def get_order(order_id: int) -> main_models.Order:
@@ -151,7 +144,8 @@ def can_see_contractor_contacts(telegram_id: int) -> bool:
 
 
 def create_comment_from_client(order_id: int,
-                               comment: str) -> tuple[main_models.Order, main_models.OrderComments]:
+                               comment: str) -> tuple[main_models.Order,
+                                                      main_models.OrderComments]:
     order = main_models.Order.objects.get(id=order_id)
     comment = main_models.OrderComments.objects.create(
         order=order,
@@ -182,7 +176,8 @@ def get_order_contractor_contact(order_id: int) -> dict:
 
 
 def create_client_order_complaint(order_id: int,
-                                  complaint: str) -> tuple[main_models.Order, main_models.Complaint]:
+                                  complaint: str) -> tuple[main_models.Order,
+                                                           main_models.Complaint]:
     order = main_models.Order.objects.get(id=order_id)
     complaint = main_models.Complaint.objects.create(
         order=order,
@@ -199,7 +194,7 @@ def create_client_order_complaint(order_id: int,
 #     return orders
 
 
-def get_contractor_available_orders(telegram_id: int) -> list[dict[str, int or str]]:
+def get_contractor_available_orders(telegram_id: int) -> QuerySet:
     return main_models.Order.objects.get_availables().order_by('created_at')
     # available_orders = [
     #     {'id': order.id, 'display': order.short_display()} for order in orders if order.is_available_order()
@@ -207,25 +202,24 @@ def get_contractor_available_orders(telegram_id: int) -> list[dict[str, int or s
     # return available_orders
 
 
-def display_contractor_salary(telegram_id: int) -> str:
-    contractor = get_contractor(telegram_id=telegram_id)
+# def display_contractor_salary(telegram_id: int) -> str:
+#     contractor = get_contractor(telegram_id=telegram_id)
 
-    start_period, end_period = fetch_start_end_of_month()
-    filter_args = {
-        'contractor': contractor,
-        'finished_at__isnull': False,
-        'finished_at__gte': start_period,
-        'finished_at__lt': end_period
-    }
-    query = contractor.orders.filter(**filter_args).aggregate(Sum('salary'))
+#     start_period, end_period = fetch_start_end_of_month()
+#     filter_args = {
+#         'contractor': contractor,
+#         'finished_at__isnull': False,
+#         'finished_at__gte': start_period,
+#         'finished_at__lt': end_period
+#     }
+#     query = contractor.orders.filter(**filter_args).aggregate(Sum('salary'))
 
-    return f'Всего вы выполнили заказов на {query["salary__sum"]} руб.'
+#     return f'Всего вы выполнили заказов на {query["salary__sum"]} руб.'
 
 
-def display_order_info(order_id: int) -> str:
-    order = main_models.Order.objects.get(id=order_id)
-
-    return order.display()
+# def display_order_info(order_id: int) -> str:
+#     order = main_models.Order.objects.get(id=order_id)
+#     return order.display()
 
 
 def set_estimate_datetime(order_id: int, estimate_datetime: datetime) -> main_models.Order:
@@ -235,18 +229,21 @@ def set_estimate_datetime(order_id: int, estimate_datetime: datetime) -> main_mo
     return order
 
 
-def close_order(order_id: int) -> None:  # TODO return ссылка на заказ в админке!
+def close_order(order_id: int) -> main_models.Order:
     order = main_models.Order.objects.get(id=order_id)
     order.finished_at = now()
     order.save()
+    return order
 
-def set_order_contractor(telegram_id: int, order_id: int) -> None:
+
+def set_order_contractor(telegram_id: int, order_id: int) -> main_models.Order:
     order = main_models.Order.objects.get(id=order_id)
     contractor = get_contractor(telegram_id=telegram_id)
     order.contractor = contractor
     order.save()
+    return order
+
 
 def get_managers_telegram_ids() -> tuple[int]:
     managers = main_models.Manager.objects.filter(active=True)
-
     return tuple(manager.person.telegram_id for manager in managers)

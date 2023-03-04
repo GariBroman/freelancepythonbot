@@ -479,7 +479,7 @@ def contractor_display_order(update: Update, context: CallbackContext) -> str:
         keyboard = keyboards.contractor_order_inline(order=order, is_current=True)
     context.bot.send_message(
         update.effective_chat.id,
-        db.display_order_info(order_id=int(order_id)),
+        order.display(),
         reply_markup=keyboard
     )
     return 'CONTRACTOR'
@@ -488,9 +488,9 @@ def contractor_display_order(update: Update, context: CallbackContext) -> str:
 @delete_prev_inline
 def contractor_take_order(update: Update, context: CallbackContext) -> str:
     _, order_id = update.callback_query.data.split(':::')
-    db.set_order_contractor(telegram_id=update.effective_chat.id, order_id=order_id)
+    order = db.set_order_contractor(telegram_id=update.effective_chat.id, order_id=order_id)
     send_message_all_managers(
-        message=messages.contractor_took_order_notification(order=db.get_order(order_id=int(order_id))),
+        message=messages.contractor_took_order_notification(order=order),
         update=update,
         context=context
     )
@@ -504,9 +504,9 @@ def contractor_take_order(update: Update, context: CallbackContext) -> str:
 @delete_prev_inline
 def contractor_finish_order(update: Update, context: CallbackContext) -> str:
     _, order_id = update.callback_query.data.split(':::')
-    db.close_order(order_id=int(order_id))
+    order = db.close_order(order_id=int(order_id))
     send_message_all_managers(
-        message=messages.contractor_finished_order_notification(order=db.get_order(order_id=int(order_id))),
+        message=messages.contractor_finished_order_notification(order=order),
         update=update,
         context=context
     )

@@ -7,7 +7,6 @@ from telegram import (
     InlineKeyboardButton,
 )
 
-import main.management.commands.messages as messages
 import main.management.commands.buttons as buttons
 
 from main import models as main_models
@@ -86,7 +85,7 @@ def client_orders_inline(orders: QuerySet,
     for num, order in enumerate(orders, enumerate_start):
         orders_buttons.append(InlineKeyboardButton(
             text=f'{buttons.ORDER["text"]} {num}',
-            callback_data=f'{buttons.ORDER["callback_data"]}:::{order["id"]}'
+            callback_data=f'{buttons.ORDER["callback_data"]}:::{order.id}'
         ))
     orders_buttons = list(chunked(orders_buttons, 3))
     orders_buttons.append([InlineKeyboardButton(**buttons.BACK_TO_CLIENT_MAIN)])
@@ -165,6 +164,7 @@ def contractor_order_inline(order: main_models.Order,
         ]
     order_buttons.append([InlineKeyboardButton(**buttons.BACK_TO_CONTRACTOR_MAIN)])
     return InlineKeyboardMarkup(order_buttons)
+
 
 def subscriptions_inline(tariffs: QuerySet) -> InlineKeyboardMarkup:
     subscription_buttons = [
