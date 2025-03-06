@@ -1,10 +1,14 @@
 from django.db.models import QuerySet
 from django.utils.timezone import datetime, timedelta, now
 from django.db.utils import IntegrityError
+import logging
 
 import main.management.commands.messages as messages
 
 from main import models as main_models
+
+# Настройка логирования
+logger = logging.getLogger(__name__)
 
 
 class EntityNotFoundError(Exception):
@@ -72,8 +76,18 @@ def get_contractor(telegram_id: int) -> main_models.Contractor:
 
 
 def is_actual_client_subscription(client_telegram_id: int) -> bool:
-    client = main_models.Client.objects.get(person__telegram_id=client_telegram_id)
-    return client.has_actual_subscription()
+    logger.debug(f'Checking subscription for client {client_telegram_id}')
+    try:
+        client = main_models.Client.objects.get(person__telegram_id=client_telegram_id)
+        has_subscription = client.has_actual_subscription()
+        logger.debug(f'Client {client_telegram_id} has active subscription: {has_subscription}')
+        return has_subscription
+    except main_models.Client.DoesNotExist:
+        logger.error(f'Client {client_telegram_id} not found')
+        return False
+    except Exception as e:
+        logger.error(f'Error checking subscription: {e}')
+        return False
 
 
 def update_client_phone(telegram_id: int,
@@ -126,9 +140,17 @@ def get_order(order_id: int) -> main_models.Order:
 
 
 def get_client_subscription_info(telegram_id: int) -> str or None:
-    subscription = get_client(telegram_id=telegram_id).subscriptions.last()
-    if subscription and subscription.is_actual():
-        return subscription.info_subscription()
+    logger.debug(f'Getting subscription info for client {telegram_id}')
+    try:
+        subscription = get_client(telegram_id=telegram_id).subscriptions.last()
+        if subscription and subscription.is_actual():
+            logger.debug(f'Found active subscription: {subscription}')
+            return subscription.info_subscription()
+        logger.debug('No active subscription found')
+        return None
+    except Exception as e:
+        logger.error(f'Error getting subscription info: {e}')
+        return None
 
 
 def can_see_contractor_contacts(telegram_id: int) -> bool:
@@ -209,3 +231,135 @@ def set_order_contractor(telegram_id: int, order_id: int) -> main_models.Order:
 def get_managers_telegram_ids() -> tuple[int]:
     managers = main_models.Manager.objects.filter(active=True)
     return tuple(manager.person.telegram_id for manager in managers)
+
+
+def get_service_categories():
+    """Получает все категории услуг"""
+    from main.models import ServiceCategory
+    return ServiceCategory.objects.all()
+
+
+def get_services_by_category(category_id):
+    """Получает все услуги в указанной категории"""
+    from main.models import Service
+    return Service.objects.filter(category_id=category_id, is_active=True)
+
+
+def get_contractor_services(contractor_id):
+    """Получает все услуги указанного исполнителя"""
+    from main.models import Service
+    return Service.objects.filter(contractor__person__telegram_id=contractor_id, is_active=True)
+
+
+def create_service(contractor_id, title, description, price, category_id, photo=None):
+    """Создает новую услугу"""
+    from main.models import Service, Contractor
+    
+    contractor = Contractor.objects.get(person__telegram_id=contractor_id)
+    
+    service = Service.objects.create(
+        contractor=contractor,
+        title=title,
+        description=description,
+        price=price,
+        category_id=category_id,
+        photo=photo
+    )
+    
+    return service
+
+
+def update_service(service_id, **kwargs):
+    """Обновляет данные услуги"""
+    from main.models import Service
+    
+    service = Service.objects.get(id=service_id)
+    
+    for field, value in kwargs.items():
+        if hasattr(service, field):
+            setattr(service, field, value)
+    
+    service.save()
+    return service
+
+
+def delete_service(service_id):
+    """Удаляет услугу (делает неактивной)"""
+    from main.models import Service
+    
+    service = Service.objects.get(id=service_id)
+    service.is_active = False
+    service.save()
+    
+    return service
+
+
+def add_service_to_set(client_id, service_id):
+    """Добавляет услугу в набор клиента"""
+    from main.models import ServiceSet, Service, Client
+    
+    client = Client.objects.get(person__telegram_id=client_id)
+    service = Service.objects.get(id=service_id)
+    
+    # Получаем или создаем текущий неоплаченный набор услуг
+    service_set, created = ServiceSet.objects.get_or_create(
+        client=client,
+        paid_at=None,
+        defaults={'created_at': datetime.now()}
+    )
+    
+    # Добавляем услугу в набор
+    service_set.services.add(service)
+    
+    return service_set
+
+
+def get_client_service_set(client_id):
+    """Получает текущий набор услуг клиента"""
+    from main.models import ServiceSet
+    
+    try:
+        return ServiceSet.objects.get(
+            client__person__telegram_id=client_id,
+            paid_at=None
+        )
+    except ServiceSet.DoesNotExist:
+        return None
+
+
+def clear_service_set(client_id):
+    """Очищает текущий набор услуг клиента"""
+    service_set = get_client_service_set(client_id)
+    
+    if service_set:
+        service_set.services.clear()
+        
+    return service_set
+
+
+def get_contractor_salary(telegram_id: int) -> str:
+    """Получает информацию о зарплате подрядчика"""
+    from main.models import Order
+    
+    contractor = get_contractor(telegram_id)
+    
+    # Получаем все завершенные заказы подрядчика
+    completed_orders = Order.objects.filter(
+        contractor=contractor,
+        finished_at__isnull=False
+    )
+    
+    # Рассчитываем общую сумму
+    total_salary = sum(order.salary for order in completed_orders)
+    
+    # Формируем сообщение
+    message = f"Общая сумма заработка: {total_salary} руб.\n\n"
+    
+    if completed_orders:
+        message += "Последние выполненные заказы:\n"
+        for order in completed_orders.order_by('-finished_at')[:5]:
+            message += f"- {order.description[:30]}... ({order.salary} руб.)\n"
+    else:
+        message += "У вас пока нет выполненных заказов."
+    
+    return message

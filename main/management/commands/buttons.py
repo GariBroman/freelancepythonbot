@@ -12,11 +12,9 @@ CHECK_ACCESS_CALLBACK = 'check_access'
 
 CLIENT_CURRENT_ORDERS = {'text': 'Мои текущие заказы', 'callback_data': 'client_current_orders'}
 
-CLIENT_CURRENT_TARIFF = {'text': 'Мой тариф', 'callback_data': 'client_current_tariff'}
-
 CONTRACTOR_AVAILABLE_ORDERS = {'text': 'Посмотреть доступные заказы', 'callback_data': 'contractor_available_orders'}
 
-CONTRACTOR_CONTACTS = {'text': "Показать контакты подрядчика", "callback_data": 'send_contractor_contacts'}
+CONTRACTOR_CONTACTS = {'text': 'Контакты исполнителя', 'callback_data': 'contractor_contacts'}
 
 CONTRACTOR_CURRENT_ORDERS = {'text': 'Посмотреть актуальные заказы', 'callback_data': 'contractor_current_orders'}
 
@@ -49,3 +47,23 @@ ORDER_COMPLAINT = {'text': 'Есть претензия', 'callback_data': 'comp
 PHONENUMBER_REQUEST = 'Поделиться номером'
 
 TAKE_ORDER = {'text': 'Взять заказ в работу', 'callback_data': 'take_order'}
+
+# Кнопки для работы с категориями и услугами
+SELECT_CATEGORY = {'text': 'Выбрать категорию', 'callback_data': 'select_category'}
+ADD_SERVICE = {'text': 'Добавить услугу', 'callback_data': 'add_service'}
+EDIT_SERVICE = {'text': 'Изменить карточку', 'callback_data': 'edit_service'}
+DELETE_SERVICE = {'text': 'Удалить карточку', 'callback_data': 'delete_service'}
+SWITCH_TO_CLIENT = {'text': 'Переключиться в режим клиента', 'callback_data': 'switch_to_client'}
+MY_SERVICES = {'text': 'Мои услуги', 'callback_data': 'my_services'}
+BUY_SERVICE = {'text': 'Приобрести услугу', 'callback_data': 'buy_service'}
+MY_CART = {'text': 'Моя корзина', 'callback_data': 'my_cart'}
+CLEAR_CART = {'text': 'Очистить корзину', 'callback_data': 'clear_cart'}
+CHECKOUT = {'text': 'Оформить заказ', 'callback_data': 'checkout'}
+
+# Шаблоны для динамических кнопок
+CATEGORY_CALLBACK = 'category:{}'
+SERVICE_CALLBACK = 'service:{}'
+ADD_TO_CART_CALLBACK = 'add_to_cart:{}'
+REMOVE_FROM_CART_CALLBACK = 'remove_from_cart:{}'
+EDIT_SERVICE_CALLBACK = 'edit_service:{}'
+DELETE_SERVICE_CALLBACK = 'delete_service:{}'

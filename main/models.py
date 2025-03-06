@@ -339,3 +339,116 @@ class Complaint(models.Model):
 
     def __str__(self):
         return f'{self.created_at} - {self.complaint} -> {self.order}'
+
+
+class ServiceCategory(models.Model):
+    """Категория услуг"""
+    name = models.CharField('Название категории', max_length=100)
+    description = models.TextField('Описание категории', blank=True)
+    
+    class Meta:
+        verbose_name = 'категория услуг'
+        verbose_name_plural = 'категории услуг'
+        
+    def __str__(self):
+        return self.name
+
+
+class Service(models.Model):
+    """Услуга фрилансера"""
+    title = models.CharField('Название услуги', max_length=200)
+    description = models.TextField('Описание услуги')
+    price = models.DecimalField(
+        'Стоимость услуги',
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0)]
+    )
+    discount = models.IntegerField(
+        'Скидка %',
+        default=0,
+        validators=[MinValueValidator(0)]
+    )
+    is_active = models.BooleanField('Активна', default=True)
+    created_at = models.DateTimeField('Создана', auto_now_add=True)
+    contractor = models.ForeignKey(
+        Contractor,
+        verbose_name='Исполнитель',
+        related_name='services',
+        on_delete=models.PROTECT
+    )
+    category = models.ForeignKey(
+        ServiceCategory,
+        verbose_name='Категория',
+        related_name='services',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True
+    )
+    photo = models.ImageField('Фото услуги', upload_to='service_photos/', blank=True, null=True)
+    
+    class Meta:
+        verbose_name = 'услуга'
+        verbose_name_plural = 'услуги'
+        
+    def __str__(self):
+        return f'{self.title} ({self.contractor.person.name})'
+    
+    def get_final_price(self):
+        """Возвращает цену с учетом скидки"""
+        if self.discount > 0:
+            return self.price * (1 - self.discount / 100)
+        return self.price
+
+
+class ServiceSet(models.Model):
+    """Набор услуг, выбранных клиентом"""
+    client = models.ForeignKey(
+        Client,
+        verbose_name='Клиент',
+        related_name='service_sets',
+        on_delete=models.PROTECT
+    )
+    services = models.ManyToManyField(
+        Service,
+        verbose_name='Услуги',
+        related_name='sets'
+    )
+    created_at = models.DateTimeField('Создан', auto_now_add=True)
+    paid_at = models.DateTimeField('Оплачен', null=True, blank=True)
+    
+    class Meta:
+        verbose_name = 'сет услуг'
+        verbose_name_plural = 'сеты услуг'
+        
+    def __str__(self):
+        return f'Набор услуг для {self.client.person.name}'
+    
+    def get_total_price(self):
+        """Возвращает общую стоимость набора услуг с учетом скидки"""
+        total = sum(service.get_final_price() for service in self.services.all())
+        # Если выбрано более 3 услуг, применяем скидку 10%
+        if self.services.count() >= 3:
+            total = total * 0.9
+        return total
+
+
+class ContractorSubscription(models.Model):
+    """Подписка исполнителя"""
+    contractor = models.ForeignKey(
+        Contractor,
+        verbose_name='Исполнитель',
+        related_name='contractor_subscriptions',
+        on_delete=models.PROTECT
+    )
+    started_at = models.DateTimeField('Начало подписки', auto_now_add=True)
+    next_payment_at = models.DateTimeField('Следующий платеж')
+    is_active = models.BooleanField('Активна', default=False)
+    payment_id = models.CharField('ID платежа', max_length=50, blank=True)
+    
+    class Meta:
+        verbose_name = 'подписка исполнителя'
+        verbose_name_plural = 'подписки исполнителей'
+        
+    def __str__(self):
+        return f'Подписка {self.contractor.person.name}'

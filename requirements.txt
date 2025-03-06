@@ -5,3 +5,4 @@ django-phonenumber-field[phonenumbers]==7.0.2
 redis==4.5.1
 django-nested-admin==4.0.2
 more-itertools==9.0.0
+yookassa==2.5.0
